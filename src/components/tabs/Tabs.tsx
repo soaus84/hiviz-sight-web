@@ -1,4 +1,5 @@
 import { colors } from '@/tokens';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 export interface TabItem {
   k: string;
@@ -13,6 +14,7 @@ export interface TabsProps {
 }
 
 export function Tabs({ items, value, onChange }: TabsProps) {
+  const touch = useBreakpoint() !== 'desktop';
   return (
     <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${colors.rule}`, marginBottom: 22, overflowX: 'auto' }}>
       {items.map((it) => {
@@ -27,14 +29,14 @@ export function Tabs({ items, value, onChange }: TabsProps) {
               background: 'transparent',
               border: 'none',
               borderBottom: `2px solid ${on ? colors.ink : 'transparent'}`,
-              padding: '0 0 12px',
+              padding: touch ? '20px 0 12px' : '0 0 12px',
               marginBottom: -1,
               fontSize: 14,
               fontWeight: on ? 700 : 600,
               color: on ? colors.ink : colors.inkMuted,
               cursor: 'pointer',
               display: 'flex',
-              alignItems: 'center',
+              alignItems: 'flex-end',
               gap: 8,
               whiteSpace: 'nowrap',
               flexShrink: 0,

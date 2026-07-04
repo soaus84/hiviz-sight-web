@@ -1,4 +1,5 @@
 import { colors } from '@/tokens';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 
 export interface PillItem {
   k: string;
@@ -13,6 +14,7 @@ export interface PillsProps {
 }
 
 export function Pills({ items, value, onChange }: PillsProps) {
+  const touch = useBreakpoint() !== 'desktop';
   return (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
       {items.map((it) => {
@@ -26,7 +28,8 @@ export function Pills({ items, value, onChange }: PillsProps) {
               fontFamily: 'var(--font-sans)',
               fontSize: 12.5,
               fontWeight: 600,
-              padding: '6px 13px',
+              padding: touch ? '14px 13px' : '6px 13px',
+              minHeight: touch ? 44 : undefined,
               borderRadius: 'var(--radius-pill)',
               border: `1px solid ${on ? colors.ink : colors.rule}`,
               background: on ? colors.ink : colors.panel,
