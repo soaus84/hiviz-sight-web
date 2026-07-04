@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hiviz Sight — Web Console</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=Geist+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200">
+<style>
+  :root {
+    --brand-font: "GT Walsheim", "Hanken Grotesk", system-ui, -apple-system, sans-serif;
+    --mono-font: "Geist Mono", ui-monospace, monospace;
+  }
+  html, body { margin:0; padding:0; height:100%; background:#FAFAF7; font-family: var(--brand-font); color:#0A0A0A; }
+  * { box-sizing: border-box; -webkit-font-smoothing: antialiased; text-rendering: optimizeLegibility; }
+  #root { height:100%; }
+  button { font-family: inherit; }
+  .material-symbols-outlined { font-variation-settings: 'FILL' 0, 'wght' 400, 'opsz' 24; user-select:none; }
+
+  /* scrollbars */
+  .a-scroll::-webkit-scrollbar { width:10px; height:10px; }
+  .a-scroll::-webkit-scrollbar-thumb { background:#E0DFDA; border-radius:99px; border:3px solid transparent; background-clip:content-box; }
+  .a-scroll::-webkit-scrollbar-thumb:hover { background:#CFCEC8; background-clip:content-box; }
+
+  /* interactions */
+  .a-nav { transition: background .12s, color .12s; }
+  .a-nav:hover { background: rgba(255,255,255,0.06) !important; color:#fff !important; }
+  .a-btn { transition: filter .12s, transform .04s, background .12s; }
+  .a-btn:hover { filter: brightness(0.94); }
+  .a-btn-ghost:hover, .a-btn-subtle:hover { filter:none; background:#F1F0EC !important; }
+  .a-btn:active { transform: translateY(0.5px); }
+  .a-iconbtn { transition: background .12s, border-color .12s, color .12s; }
+  .a-iconbtn:hover { background:#F1F0EC; }
+  .a-card-int { transition: box-shadow .14s, border-color .14s, transform .05s; }
+  .a-card-int:hover { box-shadow: 0 6px 22px rgba(10,10,10,0.09); border-color:#D8D7D2; }
+  .a-row { transition: background .1s; }
+  .a-row:hover { background:#FAFAF7; }
+  table .a-row:hover td:first-child { box-shadow: inset 3px 0 0 #FFFC36; }
+  .a-tab, .a-pill, .a-link, .a-ws { transition: color .12s, background .12s, border-color .12s; }
+  .a-tab:hover { color:#0A0A0A !important; }
+  .a-pill:hover { border-color:#0A0A0A; }
+  .a-link:hover { color:#0A0A0A !important; }
+  .a-ws:hover { background:#F1F0EC; }
+  .a-input { transition: border-color .12s, box-shadow .12s; }
+  .a-input:focus { border-color:#0A0A0A !important; box-shadow: 0 0 0 3px rgba(10,10,10,0.06); }
+  .a-input::placeholder { color:#A3A3A3; }
+
+  /* entrances */
+  @keyframes a-pulse { 0%{ box-shadow:0 0 0 0 rgba(34,135,90,0.5);} 70%{ box-shadow:0 0 0 7px rgba(34,135,90,0);} 100%{ box-shadow:0 0 0 0 rgba(34,135,90,0);} }
+  @keyframes a-slidein { from { transform: translateX(24px); opacity:0; } to { transform:none; opacity:1; } }
+  .a-drawer { animation: a-slidein .22s cubic-bezier(.2,.7,.3,1); }
+  @keyframes a-popin { from { transform: translateY(-6px) scale(0.99); opacity:0; } to { transform:none; opacity:1; } }
+  .a-pop { animation: a-popin .14s ease-out; }
+</style>
+</head>
+<body>
+<template id="__bundler_thumbnail" data-bg-color="#0C0C0C">
+  <svg viewBox="0 0 1200 800" xmlns="http://www.w3.org/2000/svg">
+    <rect width="1200" height="800" fill="#0C0C0C"/>
+    <rect x="360" y="250" width="300" height="40" rx="8" fill="#FFFC36"/>
+    <g fill="none" stroke="#FFFC36" stroke-width="5">
+      <rect x="360" y="320" width="480" height="230" rx="14"/>
+      <line x1="360" y1="250" x2="360" y2="250"/>
+    </g>
+    <g fill="#FFFC36" opacity="0.5">
+      <rect x="384" y="350" width="180" height="14" rx="7"/>
+      <rect x="384" y="386" width="430" height="10" rx="5"/>
+      <rect x="384" y="412" width="430" height="10" rx="5"/>
+      <rect x="384" y="438" width="300" height="10" rx="5"/>
+    </g>
+  </svg>
+</template>
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<!--
+  Sequential JSX loader — fetch each module in order, transform, inject as a
+  global-scope script. Same pattern as the Screen Board: avoids the preview
+  proxy overflowing on a burst of parallel Babel XHRs.
+-->
+<script>
+(async () => {
+  const FILES = ['admin-base.jsx', 'admin-data.jsx', 'admin-views-a.jsx', 'admin-views-b.jsx', 'admin-app.jsx'];
+  const BAD = /upstream connect error|reset reason|no healthy upstream/i;
+  async function fetchGood(f) {
+    for (let i = 0; i < 8; i++) {
+      const t = await (await fetch(f, { cache: 'no-store' })).text();
+      if (!BAD.test(t.slice(0, 200))) return t;
+      await new Promise(r => setTimeout(r, 150 * (i + 1)));
+    }
+    throw new Error('Could not load ' + f + ' (proxy overflow after retries)');
+  }
+  for (const f of FILES) {
+    const src = await fetchGood(f);
+    const { code } = Babel.transform(src, { presets: ['react'], filename: f });
+    const s = document.createElement('script');
+    s.textContent = code;
+    document.body.appendChild(s);
+  }
+})();
+</script>
+</body>
+</html>
