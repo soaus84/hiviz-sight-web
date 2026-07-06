@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { colors, type Tone } from '@/tokens';
 import { Card, Badge, Btn, LinkBtn, AINote, Avatar, Icon, ListRow } from '@/components';
 import { OBSERVATIONS, SIGNAL_DISPLAY, energyLabel } from '@/data/observations';
-import { INSIGHT_KIND_LABEL, moveToAction, addSupport, acknowledgeAndResolve, updateActionFields, resolveActionedInsight } from '@/data/insights';
+import { INSIGHT_KIND_LABEL, moveToAction, addSupport, assignOwner, acknowledgeAndResolve, updateActionFields, resolveActionedInsight } from '@/data/insights';
 import { useActiveUser } from '@/state/ActiveUser';
+import { USERS } from '@/data/users';
 import type { ActionFields, Insight, InsightStatus, Observation } from '@/types';
 
 const STATUS: Record<InsightStatus, [string, Tone]> = {
@@ -73,31 +74,62 @@ interface HeaderActionsProps {
   onResolve: () => void;
 }
 
-/** The header's action button set — one variation per status, formalised
- * here instead of scattered inline conditionals so a new status or action
- * only means adding a branch in one place.
+/** The header's forward-moving action(s) — one variation per status,
+ * formalised here instead of scattered inline conditionals so a new status
+ * or action only means adding a branch in one place. Who owns the insight
+ * lives outside this set entirely (the assignee chip, available across every
+ * status) since assigning isn't a step in the review/action/resolve
+ * sequence — it can happen, or change, at any point.
  * - `review`: a fork — acknowledge without acting, or progress to action.
- * - `action`: assign an owner, or resolve once there's an outcome to report.
+ *   Acknowledge is deliberately an outline button some distance from the
+ *   solid "Progress to action" one, not a matched pair butted together —
+ *   two unrelated choices, not a toggle between two states of the same thing.
+ * - `action`: resolve, once there's an outcome to report.
  * - `closed`: nothing left to do. */
 function HeaderActions({ status, ackOpen, onOpenAcknowledge, onProgressToAction, canResolve, onResolve }: HeaderActionsProps) {
   if (status === 'review') {
     if (ackOpen) return null;
     return (
       <>
-        <LinkBtn onClick={onOpenAcknowledge}>Acknowledge & resolve</LinkBtn>
+        <Btn variant="ghost" size="sm" onClick={onOpenAcknowledge}>Acknowledge</Btn>
         <Btn variant="primary" size="sm" icon="arrow_forward" onClick={onProgressToAction}>Progress to action</Btn>
       </>
     );
   }
   if (status === 'action') {
-    return (
-      <>
-        <Btn variant="ghost" size="sm" icon="person_add">Assign owner</Btn>
-        <Btn variant="primary" size="sm" icon="check" disabled={!canResolve} onClick={onResolve}>Mark resolved</Btn>
-      </>
-    );
+    return <Btn variant="primary" size="sm" icon="check" disabled={!canResolve} onClick={onResolve}>Mark resolved</Btn>;
   }
   return null;
+}
+
+/** Popover listing real Users (data/users.ts) to assign as the insight's
+ * owner — the same small-popover shell used by WorkspaceSwitcher/
+ * PurviewSwitcher (backdrop + a-pop). */
+function AssigneeMenu({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: (name: string) => void }) {
+  if (!open) return null;
+  return (
+    <>
+      <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+      <div className="a-pop" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 6, width: 230, background: colors.panel, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-popover)', zIndex: 70, overflow: 'hidden' }}>
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.inkMuted, padding: '10px 14px 6px' }}>
+          Assign owner
+        </div>
+        {USERS.map((u) => (
+          <button
+            key={u.id}
+            onClick={() => onSelect(u.name)}
+            style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', background: 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
+          >
+            <Avatar name={u.name} size={26} />
+            <div style={{ minWidth: 0 }}>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700 }}>{u.name}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11, color: colors.inkSoft }}>{u.role}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </>
+  );
 }
 
 export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Insight; onOpenObservation: (obsId: string) => void; onStatusChange?: () => void }) {
@@ -126,9 +158,15 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
   const [ackComment, setAckComment] = useState('');
   const [supportOpen, setSupportOpen] = useState(false);
   const [supportNote, setSupportNote] = useState('');
+  const [ownerMenuOpen, setOwnerMenuOpen] = useState(false);
 
   const handleProgressToAction = () => {
     moveToAction(i.id);
+    onStatusChange?.();
+  };
+  const handleAssign = (name: string) => {
+    assignOwner(i.id, name);
+    setOwnerMenuOpen(false);
     onStatusChange?.();
   };
   const handleSupport = () => {
@@ -153,7 +191,29 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
         <Badge tone={sh}>{sl}</Badge>
         <Badge tone={kindTone} outline>{kindLabel}</Badge>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, fontWeight: 700, color: colors.inkSoft }}>{i.id}</span>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
+      </div>
+      <h2 style={{ fontFamily: 'var(--font-sans)', margin: 0, fontSize: 23, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1.2 }}>{i.title}</h2>
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
+        {i.siteNames.map((s, k) => <Badge key={k} tone="primary" outline icon="place">{s}</Badge>)}
+      </div>
+
+      <div style={{ position: 'relative', marginTop: 14, background: colors.fill, borderRadius: 'var(--radius-lg)', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
+        <button
+          onClick={() => i.status !== 'closed' && setOwnerMenuOpen((v) => !v)}
+          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: i.status !== 'closed' ? 'pointer' : 'default' }}
+        >
+          {i.owner ? <Avatar name={i.owner} size={26} /> : (
+            <div style={{ width: 26, height: 26, borderRadius: '50%', background: colors.rule, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+              <Icon name="person" size={14} color={colors.inkMuted} />
+            </div>
+          )}
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 500, color: i.owner ? colors.ink : colors.inkMuted }}>{i.owner || 'Unassigned'}</span>
+          {i.status !== 'closed' && (
+            <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, color: colors.ink, textDecoration: 'underline', textTransform: 'uppercase' }}>{i.owner ? 'Reassign' : 'Assign'}</span>
+          )}
+        </button>
+        <AssigneeMenu open={ownerMenuOpen} onClose={() => setOwnerMenuOpen(false)} onSelect={handleAssign} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <HeaderActions
             status={i.status}
             ackOpen={ackOpen}
@@ -163,10 +223,6 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
             onResolve={handleResolve}
           />
         </div>
-      </div>
-      <h2 style={{ fontFamily: 'var(--font-sans)', margin: 0, fontSize: 23, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1.2 }}>{i.title}</h2>
-      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
-        {i.siteNames.map((s, k) => <Badge key={k} tone="primary" outline icon="place">{s}</Badge>)}
       </div>
 
       {i.status === 'review' && ackOpen && (

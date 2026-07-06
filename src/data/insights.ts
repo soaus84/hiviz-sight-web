@@ -59,7 +59,7 @@ export const INSIGHTS: Insight[] = [
     siteNames: ['Jewell Crusher'], observationCount: 4, supporterInitials: ['NO', 'JL'], energyTypes: ['kinetic'], updated: '3h ago', updatedAt: '2025-05-07T07:00:00', cleared_for_toolbox: false },
   { id: 'INS-2187', status: 'action', kind: 'worksite_trend', theme: 'Tool tethering', title: 'Tool tethering on elevated walkways',
     summary: 'Unsecured tools observed at height on overhead conveyor walkways across two shifts at Coolinga.',
-    siteNames: ['Coolinga Plant'], observationCount: 6, supporterInitials: ['JL', 'TM'], energyTypes: ['gravitational'], owner: 'J. Liang · Safety', updated: '5d ago', updatedAt: '2025-05-02T10:00:00', cleared_for_toolbox: true,
+    siteNames: ['Coolinga Plant'], observationCount: 6, supporterInitials: ['JL', 'TM'], energyTypes: ['gravitational'], owner: 'Jess Liang', updated: '5d ago', updatedAt: '2025-05-02T10:00:00', cleared_for_toolbox: true,
     action: {
       controlNeed: 'Stop unsecured tool use at height until a tethering standard is issued.',
       controlDone: 'Tool tethering made mandatory on all elevated conveyor walkways from this shift.',
@@ -68,7 +68,7 @@ export const INSIGHTS: Insight[] = [
     } },
   { id: 'INS-2179', status: 'action', kind: 'worksite_trend', theme: 'Radio discipline', title: 'Radio handoff protocol at shift change',
     summary: 'New 2-minute radio handoff trialled with the loader crew; rolling out site-wide at Northgate.',
-    siteNames: ['Northgate Open Cut'], observationCount: 5, supporterInitials: ['OS', 'KO'], energyTypes: ['none'], owner: 'Ops + Safety', updated: '1w ago', updatedAt: '2025-04-30T10:00:00', cleared_for_toolbox: true,
+    siteNames: ['Northgate Open Cut'], observationCount: 5, supporterInitials: ['OS', 'KO'], energyTypes: ['none'], owner: 'Priya Singh', updated: '1w ago', updatedAt: '2025-04-30T10:00:00', cleared_for_toolbox: true,
     action: {
       controlNeed: "Confirm the handover gap isn't causing a live exposure this shift.",
       controlDone: 'Confirmed no live incidents from the gap — a process issue, not an immediate hazard.',
@@ -78,7 +78,7 @@ export const INSIGHTS: Insight[] = [
     } },
   { id: 'INS-2154', status: 'closed', kind: 'worksite_trend', theme: 'Exclusion signage', title: 'Exclusion zone signage refresh',
     summary: 'Faded signage replaced at three zones following manager support.',
-    siteNames: ['Northgate Open Cut'], observationCount: 8, supporterInitials: ['SS', 'KO', 'TM', 'AP'], energyTypes: ['none'], owner: 'Site services', updated: '2w ago', updatedAt: '2025-04-23T10:00:00', cleared_for_toolbox: true,
+    siteNames: ['Northgate Open Cut'], observationCount: 8, supporterInitials: ['SS', 'KO', 'TM', 'AP'], energyTypes: ['none'], owner: 'James Morrow', updated: '2w ago', updatedAt: '2025-04-23T10:00:00', cleared_for_toolbox: true,
     resolutionType: 'actioned',
     action: {
       controlNeed: 'Replace the faded signage that is degrading the exclusion boundary now.',
@@ -91,7 +91,7 @@ export const INSIGHTS: Insight[] = [
     resolutionSummary: 'Immediate risk was contained: faded signage was replaced at all 3 zones the same week. Crews were briefed at toolbox talk and signage posted at each zone entry. Signage condition has since been added to the monthly inspection checklist to prevent recurrence.' },
   { id: 'INS-2140', status: 'closed', kind: 'worksite_trend', theme: 'Housekeeping', title: 'Fuel bay housekeeping standard rolled out',
     summary: 'Recurring housekeeping gaps at the fuel bay closed out with a new standard, now embedded in the site induction.',
-    siteNames: ['Marlow Stockyard'], observationCount: 5, supporterInitials: ['DC'], energyTypes: ['none'], owner: 'Site services', updated: '2mo ago', updatedAt: '2025-03-08T10:00:00', cleared_for_toolbox: true,
+    siteNames: ['Marlow Stockyard'], observationCount: 5, supporterInitials: ['DC'], energyTypes: ['none'], owner: 'Marcus Okafor', updated: '2mo ago', updatedAt: '2025-03-08T10:00:00', cleared_for_toolbox: true,
     resolutionType: 'acknowledged',
     resolutionComment: 'Housekeeping standard rolled out sitewide and folded into the site induction — closing without the full action workflow since this predates it.' },
 ];
@@ -111,6 +111,14 @@ function replaceInsight(id: string, patch: Partial<Insight>): Insight | null {
  * support below, which backs an insight without moving it anywhere. */
 export function moveToAction(id: string): Insight | null {
   return replaceInsight(id, { status: 'action' });
+}
+
+/** Sets (or changes) who owns following through on this insight. Available
+ * regardless of status while it's still open — assigning isn't gated to
+ * `action`, an insight can have a named owner from the moment it lands in
+ * review. */
+export function assignOwner(id: string, name: string): Insight | null {
+  return replaceInsight(id, { owner: name });
 }
 
 /** Backs an insight for action with a comment — the "Support for action"
