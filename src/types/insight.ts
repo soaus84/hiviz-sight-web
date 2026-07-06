@@ -46,6 +46,23 @@ export interface Endorsement {
   note: string;
 }
 
+/** Manager-entered fields captured while an insight is `action` — three
+ * pillars (contain the immediate hazard / tell people / fix the system),
+ * each with a "what's needed" and "what happened" side. Neither pillar
+ * gates the others — a manager can fill in Learn without Improve, etc.,
+ * matching specs/features/CORRECTIVE-ACTIONS.md's "neither phase gates the
+ * other" rule in the roadmap spec. */
+export interface ActionFields {
+  controlNeed?: string;
+  controlDone?: string;
+  learnNeed?: string;
+  learnDone?: string;
+  improveNeed?: string;
+  improveDone?: string;
+}
+
+export type ResolutionType = 'acknowledged' | 'actioned';
+
 export interface Insight {
   id: string;
   status: InsightStatus;
@@ -62,9 +79,7 @@ export interface Insight {
   cause?: string;
   /** Human-approval flag — true once routed for crew-facing action, never auto-set. */
   cleared_for_toolbox: boolean;
-  step?: string;
   owner?: string;
-  outcome?: string;
 
   // rich detail — only populated for the one enriched reference example
   suggested?: string;
@@ -72,4 +87,14 @@ export interface Insight {
   causeBasis?: string;
   fwClassifications?: FwClassification[];
   endorsements?: Endorsement[];
+
+  // action + resolution — populated once the insight leaves `review`
+  action?: ActionFields;
+  /** How a `closed` insight got there — distinguishes a straight acknowledgement
+   * (comment only) from one that went through the action fields above. */
+  resolutionType?: ResolutionType;
+  /** Manager's own words — set when resolutionType is 'acknowledged'. */
+  resolutionComment?: string;
+  /** Hiviz-authored recap of the action outcome — set when resolutionType is 'actioned'. */
+  resolutionSummary?: string;
 }

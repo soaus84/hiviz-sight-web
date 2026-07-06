@@ -47,7 +47,7 @@ function AllComponents() {
       <Section title="Tabs"><Tabs value={tab} onChange={setTab} items={[{ k: 'review', label: 'For review', n: 3 }, { k: 'action', label: 'In action', n: 2 }]} /></Section>
       <Section title="Pills"><Pills value={pill} onChange={setPill} items={[{ k: 'all', label: 'All', n: 7 }, { k: 'risk', label: 'At risk', n: 2 }]} /></Section>
       <Section title="Search"><Search placeholder="Search sites" width={260} /></Section>
-      <Section title="Stat"><Stat label="Visits this week" value="4" sub="1 live · 3 planned" icon="event" /><Stat label="Open insights" value="12" sub="4 awaiting support" icon="lightbulb" /></Section>
+      <Section title="Stat"><Stat label="Visits this week" value="4" sub="1 live · 3 planned" icon="calendar_today" /><Stat label="Open insights" value="12" sub="4 awaiting support" icon="lightbulb" /></Section>
       <Section title="AINote"><div style={{ maxWidth: 420 }}><AINote>A control working as designed — captured as a positive to reinforce.</AINote></div></Section>
       <Section title="Meter"><Meter value={64} tone={colors.red} /></Section>
       <Section title="SignalMix"><SignalMix s={{ pos: 2, weak: 3, barrier: 1 }} /></Section>

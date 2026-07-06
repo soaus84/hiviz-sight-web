@@ -26,7 +26,7 @@ export function getDrilldown(pathname: string): Drilldown | null {
     nav: [
       { path: base, label: 'Overview', icon: 'summarize' },
       { path: `${base}/insights`, label: 'Insights', icon: 'lightbulb' },
-      { path: `${base}/visits`, label: 'Visits', icon: 'event' },
+      { path: `${base}/visits`, label: 'Visits', icon: 'calendar_today' },
       { path: `${base}/observations`, label: 'Observations', icon: 'visibility' },
       { path: `${base}/contacts`, label: 'Contacts', icon: 'contacts' },
     ],

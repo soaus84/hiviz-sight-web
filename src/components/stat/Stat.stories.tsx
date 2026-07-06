@@ -26,14 +26,14 @@ export default meta;
 type Story = StoryObj<typeof Stat>;
 
 export const Playground: Story = {
-  args: { label: 'Visits this week', value: '4', sub: '1 live · 3 planned', icon: 'event' },
+  args: { label: 'Visits this week', value: '4', sub: '1 live · 3 planned', icon: 'calendar_today' },
 };
 
 export const Default_UsedIn8Places: Story = {
   name: 'Default — used 8×: Dashboard ×4, SiteDetail ×4',
   render: () => (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 220px)', gap: 16 }}>
-      <Stat label="Visits this week" value="4" sub="1 live · 3 planned" icon="event" />
+      <Stat label="Visits this week" value="4" sub="1 live · 3 planned" icon="calendar_today" />
       <Stat label="Open insights" value="12" sub="4 awaiting your support" icon="lightbulb" />
       <Stat label="Observations · 7d" value="47" delta="+18%" icon="visibility" />
       <Stat label="Sites at risk" value="2" unit="of 7" sub="Coolinga · Jewell" icon="warning" />

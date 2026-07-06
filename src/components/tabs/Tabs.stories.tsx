@@ -12,7 +12,7 @@ type Story = StoryObj<typeof Tabs>;
 const ITEMS = [
   { k: 'review', label: 'For review', n: 3 },
   { k: 'action', label: 'In action', n: 2 },
-  { k: 'closed', label: 'Closed', n: 1 },
+  { k: 'closed', label: 'Resolved', n: 1 },
 ];
 
 export const Interactive: Story = {

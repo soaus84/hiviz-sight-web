@@ -68,7 +68,7 @@ export function Dashboard() {
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: statCols, gap: 16, marginBottom: 24 }}>
-        <Stat label="Visits" value={visits.filter((v) => v.state === 'live' || v.state === 'upcoming').length} sub={`${live ? 1 : 0} live · ${visits.filter((v) => v.state === 'upcoming').length} planned`} icon="event" />
+        <Stat label="Visits" value={visits.filter((v) => v.state === 'live' || v.state === 'upcoming').length} sub={`${live ? 1 : 0} live · ${visits.filter((v) => v.state === 'upcoming').length} planned`} icon="calendar_today" />
         <Stat label="Open insights" value={insights.filter((i) => i.status !== 'closed').length} sub={`${insights.filter((i) => i.status === 'review' && !i.owner).length} awaiting your support`} icon="lightbulb" />
         <Stat label="Observations · 7d" value={obsLast7d.length} icon="visibility" />
         <Stat label="Sites at risk" value={sitesAtRisk.length} unit={`of ${sites.length}`} sub={sitesAtRisk.length ? sitesAtRisk.map((s) => s.name).join(' · ') : 'None'} icon="warning" />

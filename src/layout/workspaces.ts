@@ -29,7 +29,7 @@ export const WORKSPACES: Workspace[] = [
     nav: [
       { path: '/dashboard', label: 'Dashboard', icon: 'grid_view' },
       { path: '/insights', label: 'Insights', icon: 'lightbulb' },
-      { path: '/visits', label: 'Visits', icon: 'event' },
+      { path: '/visits', label: 'Visits', icon: 'calendar_today' },
       { path: '/observations', label: 'Observations', icon: 'visibility' },
       { path: '/sites', label: 'Sites', icon: 'location_on' },
     ],

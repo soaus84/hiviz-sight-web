@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
@@ -52,7 +52,11 @@ export function Insights() {
     }
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const inRegion = useMemo(() => INSIGHTS.filter((i) => insightInRegion(i, { region, division })), [region, division]);
+  // Not memoized: INSIGHTS is a plain mutable array (status transitions
+  // replace elements in place, see data/insights.ts), so a memo keyed only on
+  // [region, division] would go stale the moment an insight's status changes
+  // without the purview itself changing. The filter is cheap at this scale.
+  const inRegion = INSIGHTS.filter((i) => insightInRegion(i, { region, division }));
 
   const counts = {
     review: inRegion.filter((i) => i.status === 'review').length,
@@ -61,7 +65,7 @@ export function Insights() {
   };
   const unassignedInTab = inRegion.filter((i) => i.status === tab && !i.owner).length;
   const unassignedTotal = inRegion.filter((i) => !i.owner).length;
-  const list = useMemo(() => inRegion.filter((i) => i.status === tab && (assigned === 'all' || !i.owner)), [inRegion, tab, assigned]);
+  const list = inRegion.filter((i) => i.status === tab && (assigned === 'all' || !i.owner));
 
   useEffect(() => {
     if (list.find((i) => i.id === selId)) return;
@@ -80,6 +84,18 @@ export function Insights() {
     setTabState(k as InsightStatus);
     setParams(k === 'review' ? {} : { tab: k }, { replace: true });
     if (id) navigate('/insights', { replace: true });
+  };
+
+  // Fired after a status-transition mutates the selected insight in place —
+  // re-syncs the visible tab so the card follows it to wherever it landed,
+  // and forces the re-render that surfaces the mutation (INSIGHTS is a plain
+  // mutable array, not React state).
+  const handleInsightChanged = () => {
+    if (!selId) return;
+    const updated = INSIGHTS_BY_ID[selId];
+    if (!updated) return;
+    setTabState(updated.status);
+    setParams(updated.status === 'review' ? {} : { tab: updated.status }, { replace: true });
   };
 
   const selectCard = (cardId: string) => {
@@ -135,7 +151,7 @@ export function Insights() {
           />
           {view === 'list' && (
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
-              <Tabs value={tab} onChange={setTab} items={[{ k: 'review', label: 'For review', n: counts.review }, { k: 'action', label: 'In action', n: counts.action }, { k: 'closed', label: 'Closed', n: counts.closed }]} />
+              <Tabs value={tab} onChange={setTab} items={[{ k: 'review', label: 'For review', n: counts.review }, { k: 'action', label: 'In action', n: counts.action }, { k: 'closed', label: 'Resolved', n: counts.closed }]} />
               <Pills value={assigned} onChange={setAssigned} items={[{ k: 'all', label: 'All' }, { k: 'unassigned', label: 'Unassigned', n: unassignedInTab }]} />
             </div>
           )}
@@ -180,7 +196,7 @@ export function Insights() {
 
           {showDetail && sel && (
             <div style={{ overflowY: fitToHeight ? 'auto' : undefined, minHeight: fitToHeight ? 0 : undefined }}>
-              <InsightDetail i={sel} onOpenObservation={openObs} />
+              <InsightDetail key={sel.id} i={sel} onOpenObservation={openObs} onStatusChange={handleInsightChanged} />
             </div>
           )}
         </div>

@@ -35,8 +35,8 @@ export const Solid_PrimaryStatus: Story = {
       <Badge tone="error">Barrier failure</Badge>
       <Badge tone="warning">Weak signal</Badge>
       <Badge tone="success">Positive</Badge>
-      <Badge tone="warning">Awaiting support</Badge>
-      <Badge tone="primary">In action</Badge>
+      <Badge tone="warning">Needs review</Badge>
+      <Badge tone="info">In action</Badge>
       <Badge tone="success">Briefed</Badge>
     </div>
   ),

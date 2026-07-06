@@ -3,9 +3,9 @@ import { Avatar, Badge } from '@/components';
 import type { Insight, InsightStatus } from '@/types';
 
 const STATUS: Record<InsightStatus, [string, Tone]> = {
-  review: ['Awaiting support', 'warning'],
-  action: ['In action', 'primary'],
-  closed: ['Closed', 'success'],
+  review: ['Needs review', 'warning'],
+  action: ['In action', 'info'],
+  closed: ['Resolved', 'success'],
 };
 
 export interface InsightCardProps {

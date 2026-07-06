@@ -1,4 +1,4 @@
-import type { Insight, InsightKind } from '@/types';
+import type { ActionFields, Insight, InsightKind } from '@/types';
 import type { Tone } from '@/tokens';
 import { SITES_BY_ID, SITE_ID_BY_NAME } from './sites';
 import { inPurview, type PurviewFilter } from './purview';
@@ -59,19 +59,107 @@ export const INSIGHTS: Insight[] = [
     siteNames: ['Jewell Crusher'], observationCount: 4, supporterInitials: ['NO', 'JL'], energyTypes: ['kinetic'], updated: '3h ago', updatedAt: '2025-05-07T07:00:00', cleared_for_toolbox: false },
   { id: 'INS-2187', status: 'action', kind: 'worksite_trend', theme: 'Tool tethering', title: 'Tool tethering on elevated walkways',
     summary: 'Unsecured tools observed at height on overhead conveyor walkways across two shifts at Coolinga.',
-    siteNames: ['Coolinga Plant'], observationCount: 6, supporterInitials: ['JL', 'TM'], energyTypes: ['gravitational'], step: 'SOP update drafted', owner: 'J. Liang · Safety', updated: '5d ago', updatedAt: '2025-05-02T10:00:00', cleared_for_toolbox: true },
+    siteNames: ['Coolinga Plant'], observationCount: 6, supporterInitials: ['JL', 'TM'], energyTypes: ['gravitational'], owner: 'J. Liang · Safety', updated: '5d ago', updatedAt: '2025-05-02T10:00:00', cleared_for_toolbox: true,
+    action: {
+      controlNeed: 'Stop unsecured tool use at height until a tethering standard is issued.',
+      controlDone: 'Tool tethering made mandatory on all elevated conveyor walkways from this shift.',
+      learnNeed: 'Crews need to know tethering is now mandatory before their next elevated task.',
+      improveNeed: 'Draft a site-wide tool tethering SOP covering all elevated walkways.',
+    } },
   { id: 'INS-2179', status: 'action', kind: 'worksite_trend', theme: 'Radio discipline', title: 'Radio handoff protocol at shift change',
     summary: 'New 2-minute radio handoff trialled with the loader crew; rolling out site-wide at Northgate.',
-    siteNames: ['Northgate Open Cut'], observationCount: 5, supporterInitials: ['OS', 'KO'], energyTypes: ['none'], step: 'Rolling out site-wide', owner: 'Ops + Safety', updated: '1w ago', updatedAt: '2025-04-30T10:00:00', cleared_for_toolbox: true },
+    siteNames: ['Northgate Open Cut'], observationCount: 5, supporterInitials: ['OS', 'KO'], energyTypes: ['none'], owner: 'Ops + Safety', updated: '1w ago', updatedAt: '2025-04-30T10:00:00', cleared_for_toolbox: true,
+    action: {
+      controlNeed: "Confirm the handover gap isn't causing a live exposure this shift.",
+      controlDone: 'Confirmed no live incidents from the gap — a process issue, not an immediate hazard.',
+      learnNeed: 'Loader crew needs the new 2-minute handoff protocol before next shift change.',
+      learnDone: 'Trialled with the loader crew and briefed at toolbox talk.',
+      improveNeed: 'Roll the 2-minute radio handoff out site-wide at Northgate.',
+    } },
   { id: 'INS-2154', status: 'closed', kind: 'worksite_trend', theme: 'Exclusion signage', title: 'Exclusion zone signage refresh',
     summary: 'Faded signage replaced at three zones following manager support.',
-    siteNames: ['Northgate Open Cut'], observationCount: 8, supporterInitials: ['SS', 'KO', 'TM', 'AP'], energyTypes: ['none'], outcome: 'Signage replaced at 3 zones', owner: 'Site services', updated: '2w ago', updatedAt: '2025-04-23T10:00:00', cleared_for_toolbox: true },
+    siteNames: ['Northgate Open Cut'], observationCount: 8, supporterInitials: ['SS', 'KO', 'TM', 'AP'], energyTypes: ['none'], owner: 'Site services', updated: '2w ago', updatedAt: '2025-04-23T10:00:00', cleared_for_toolbox: true,
+    resolutionType: 'actioned',
+    action: {
+      controlNeed: 'Replace the faded signage that is degrading the exclusion boundary now.',
+      controlDone: 'Faded signage replaced at all 3 zones the same week.',
+      learnNeed: 'Crews need to know the boundary lines have changed at these zones.',
+      learnDone: 'Briefed at toolbox talk and posted at each zone entry.',
+      improveNeed: 'Add signage condition to the routine site inspection checklist.',
+      improveDone: 'Signage condition added to the monthly inspection checklist.',
+    },
+    resolutionSummary: 'Immediate risk was contained: faded signage was replaced at all 3 zones the same week. Crews were briefed at toolbox talk and signage posted at each zone entry. Signage condition has since been added to the monthly inspection checklist to prevent recurrence.' },
   { id: 'INS-2140', status: 'closed', kind: 'worksite_trend', theme: 'Housekeeping', title: 'Fuel bay housekeeping standard rolled out',
     summary: 'Recurring housekeeping gaps at the fuel bay closed out with a new standard, now embedded in the site induction.',
-    siteNames: ['Marlow Stockyard'], observationCount: 5, supporterInitials: ['DC'], energyTypes: ['none'], outcome: 'Housekeeping standard rolled out sitewide', owner: 'Site services', updated: '2mo ago', updatedAt: '2025-03-08T10:00:00', cleared_for_toolbox: true },
+    siteNames: ['Marlow Stockyard'], observationCount: 5, supporterInitials: ['DC'], energyTypes: ['none'], owner: 'Site services', updated: '2mo ago', updatedAt: '2025-03-08T10:00:00', cleared_for_toolbox: true,
+    resolutionType: 'acknowledged',
+    resolutionComment: 'Housekeeping standard rolled out sitewide and folded into the site induction — closing without the full action workflow since this predates it.' },
 ];
 
 export const INSIGHTS_BY_ID: Record<string, Insight> = Object.fromEntries(INSIGHTS.map((i) => [i.id, i]));
+
+function replaceInsight(id: string, patch: Partial<Insight>): Insight | null {
+  const idx = INSIGHTS.findIndex((i) => i.id === id);
+  if (idx === -1) return null;
+  const updated: Insight = { ...INSIGHTS[idx], ...patch, updated: 'Just now', updatedAt: MOCK_NOW.toISOString() };
+  INSIGHTS[idx] = updated;
+  INSIGHTS_BY_ID[id] = updated;
+  return updated;
+}
+
+/** review -> action. A dedicated status transition — distinct from adding
+ * support below, which backs an insight without moving it anywhere. */
+export function moveToAction(id: string): Insight | null {
+  return replaceInsight(id, { status: 'action' });
+}
+
+/** Backs an insight for action with a comment — the "Support for action"
+ * list at the bottom of the detail view. Does not change status; an insight
+ * can accumulate support while still sitting in review. Routes into
+ * whichever shape the insight already uses: the rich `endorsements` array
+ * for the one enriched reference example, otherwise the plain
+ * `supporterInitials` list everything else uses. */
+export function addSupport(id: string, name: string, initials: string, note: string): Insight | null {
+  const current = INSIGHTS_BY_ID[id];
+  if (!current) return null;
+  if (current.endorsements) {
+    return replaceInsight(id, { endorsements: [...current.endorsements, { name, note }] });
+  }
+  if (current.supporterInitials.includes(initials)) return current;
+  return replaceInsight(id, { supporterInitials: [...current.supporterInitials, initials] });
+}
+
+/** review -> closed, skipping the action fields entirely — a comment-only
+ * acknowledgement (e.g. false positive, accepted risk, duplicate). */
+export function acknowledgeAndResolve(id: string, comment: string): Insight | null {
+  return replaceInsight(id, { status: 'closed', resolutionType: 'acknowledged', resolutionComment: comment });
+}
+
+/** Patches the in-progress action fields without changing status. */
+export function updateActionFields(id: string, fields: Partial<ActionFields>): Insight | null {
+  const current = INSIGHTS_BY_ID[id];
+  if (!current) return null;
+  return replaceInsight(id, { action: { ...current.action, ...fields } });
+}
+
+/** action -> closed. Requires at least one outcome field filled (matches
+ * CORRECTIVE-ACTIONS.md's "neither phase gates the other" — a manager can
+ * complete Learn without Improve, etc., but resolving needs *something* to
+ * summarise). Generates the outcome summary shown on the resolved insight. */
+export function resolveActionedInsight(id: string): Insight | null {
+  const current = INSIGHTS_BY_ID[id];
+  if (!current) return null;
+  return replaceInsight(id, { status: 'closed', resolutionType: 'actioned', resolutionSummary: generateOutcomeSummary(current.action) });
+}
+
+function generateOutcomeSummary(action?: ActionFields): string {
+  const sentences: string[] = [];
+  if (action?.controlDone) sentences.push(`Immediate risk was contained: ${action.controlDone}`);
+  if (action?.improveDone) sentences.push(`The underlying gap was addressed: ${action.improveDone}`);
+  if (action?.learnDone) sentences.push(`This was communicated to crews: ${action.learnDone}`);
+  if (sentences.length === 0) return 'Marked resolved with no outcome recorded.';
+  return sentences.join(' ');
+}
 
 /** True if at least one of the insight's contributing sites satisfies the
  * FULL current purview (region AND division together, on the same site) —
