@@ -2,14 +2,16 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { PageHead, Tabs, Pills, Btn, IconBtn, LinkBtn } from '@/components';
+import { PageHead, Tabs, Pills, Btn, IconBtn, LinkBtn, Drawer } from '@/components';
 import { INSIGHTS, INSIGHTS_BY_ID, insightInRegion } from '@/data/insights';
+import { OBSERVATIONS } from '@/data/observations';
 import { purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
 import { InsightDetail } from './InsightDetail';
 import { InsightCard } from './InsightCard';
 import { InsightsBoard } from './InsightsBoard';
 import { insightsFitToHeight, type InsightsView } from './insightsLayout';
+import { ObsDetail } from '@/views/observations/ObsDetail';
 import type { InsightStatus } from '@/types';
 
 const VALID_TABS: InsightStatus[] = ['review', 'action', 'closed'];
@@ -83,6 +85,19 @@ export function Insights() {
   const selectCard = (cardId: string) => {
     setSelId(cardId);
     navigate(`/insights/${cardId}`, { replace: true });
+  };
+
+  const selObsId = params.get('obs');
+  const selObs = selObsId ? OBSERVATIONS.find((o) => o.id === selObsId) ?? null : null;
+  const openObs = (obsId: string) => {
+    const next = new URLSearchParams(params);
+    next.set('obs', obsId);
+    setParams(next);
+  };
+  const closeObs = () => {
+    const next = new URLSearchParams(params);
+    next.delete('obs');
+    setParams(next);
   };
 
   // Below desktop, the list can no longer share the row with the detail panel
@@ -165,11 +180,15 @@ export function Insights() {
 
           {showDetail && sel && (
             <div style={{ overflowY: fitToHeight ? 'auto' : undefined, minHeight: fitToHeight ? 0 : undefined }}>
-              <InsightDetail i={sel} />
+              <InsightDetail i={sel} onOpenObservation={openObs} />
             </div>
           )}
         </div>
       )}
+
+      <Drawer open={!!selObs} onClose={closeObs}>
+        {selObs && <ObsDetail o={selObs} onClose={closeObs} />}
+      </Drawer>
     </div>
   );
 }

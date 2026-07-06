@@ -41,12 +41,6 @@ export interface FwClassification {
   rationale: string;
 }
 
-export interface SourceObservationQuote {
-  quote: string;
-  siteName: string;
-  ago: string;
-}
-
 export interface Endorsement {
   name: string;
   note: string;
@@ -65,7 +59,6 @@ export interface Insight {
   energyTypes: EnergyType[];
   updated: string;
   updatedAt: string;
-  routed?: boolean;
   cause?: string;
   /** Human-approval flag — true once routed for crew-facing action, never auto-set. */
   cleared_for_toolbox: boolean;
@@ -77,7 +70,6 @@ export interface Insight {
   suggested?: string;
   suggestedBasis?: string;
   causeBasis?: string;
-  sourceObservations?: SourceObservationQuote[];
   fwClassifications?: FwClassification[];
   endorsements?: Endorsement[];
 }

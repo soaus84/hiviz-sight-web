@@ -30,7 +30,7 @@ export function AppShell() {
         <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: colors.bg }}>
           {breakpoint !== 'mobile' && <Sidebar collapsed={breakpoint === 'tablet'} />}
           {breakpoint === 'mobile' && (
-            <Drawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} width={244}>
+            <Drawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} width={244} fullScreenOnMobile={false} side="left">
               <Sidebar onNavigate={() => setMobileNavOpen(false)} />
             </Drawer>
           )}

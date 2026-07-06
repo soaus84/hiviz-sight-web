@@ -97,7 +97,17 @@ export function PlanVisit() {
         <PlanVisitSchedule site={site} dateChoice={dateChoice} date={date} time={time} onChoiceChange={handleChoiceChange} onTimeChange={setTime} onChangeSite={() => setStep(1)} />
       )}
       {step === 3 && site && (
-        <PlanVisitBriefing site={site} focusNotes={focusNotes} onNotesChange={setFocusNotes} relatedInsightIds={relatedInsightIds} onInsightsChange={setRelatedInsightIds} />
+        <PlanVisitBriefing
+          site={site}
+          dateChoice={dateChoice}
+          date={date}
+          time={time}
+          focusNotes={focusNotes}
+          onNotesChange={setFocusNotes}
+          relatedInsightIds={relatedInsightIds}
+          onInsightsChange={setRelatedInsightIds}
+          onChangeSchedule={() => setStep(2)}
+        />
       )}
       {step === 4 && site && (
         <PlanVisitReview site={site} dateChoice={dateChoice} date={date} time={time} focusNotes={focusNotes} relatedInsightIds={relatedInsightIds} />

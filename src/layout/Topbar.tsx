@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { colors } from '@/tokens';
-import { IconBtn, Search } from '@/components';
+import { IconBtn } from '@/components';
 import { NOTIF_UNREAD } from '@/data/notifications';
 import { NotifMenu } from './NotifMenu';
 import { PurviewSwitcher } from './PurviewSwitcher';
@@ -14,7 +14,6 @@ export interface TopbarProps {
 
 export function Topbar({ breakpoint, onMenuClick }: TopbarProps) {
   const [notifOpen, setNotifOpen] = useState(false);
-  const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const isMobile = breakpoint === 'mobile';
 
   return (
@@ -37,32 +36,18 @@ export function Topbar({ breakpoint, onMenuClick }: TopbarProps) {
         <IconBtn name="menu" onClick={onMenuClick} />
       )}
 
-      {isMobile && mobileSearchOpen ? (
-        <>
-          <Search placeholder="Search…" width="100%" />
-          <IconBtn name="close" onClick={() => setMobileSearchOpen(false)} />
-        </>
-      ) : (
-        <>
-          {!isMobile && <PurviewSwitcher />}
-          <div style={{ flex: 1 }} />
-          {isMobile ? (
-            <IconBtn name="search" onClick={() => setMobileSearchOpen(true)} />
-          ) : (
-            <Search placeholder="Search sites, observations, people…" width={340} />
-          )}
-          <div style={{ position: 'relative' }}>
-            <IconBtn name="notifications" badge={NOTIF_UNREAD} active={notifOpen} onClick={() => setNotifOpen((v) => !v)} />
-            {notifOpen && (
-              <>
-                <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
-                <NotifMenu onClose={() => setNotifOpen(false)} />
-              </>
-            )}
-          </div>
-          <UserSwitcher />
-        </>
-      )}
+      <PurviewSwitcher />
+      <div style={{ flex: 1 }} />
+      <div style={{ position: 'relative' }}>
+        <IconBtn name="notifications" badge={NOTIF_UNREAD} active={notifOpen} onClick={() => setNotifOpen((v) => !v)} />
+        {notifOpen && (
+          <>
+            <div onClick={() => setNotifOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
+            <NotifMenu onClose={() => setNotifOpen(false)} />
+          </>
+        )}
+      </div>
+      <UserSwitcher />
     </div>
   );
 }

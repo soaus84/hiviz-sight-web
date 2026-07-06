@@ -1,5 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { colors, softTone } from '@/tokens';
+import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { Icon, Dot, LinkBtn, ListRow } from '@/components';
 import { NOTIFS } from '@/data/notifications';
 import type { Notification } from '@/types';
@@ -17,6 +18,8 @@ const ROUTE: Record<Notification['to'], string> = {
 
 export function NotifMenu({ onClose }: NotifMenuProps) {
   const navigate = useNavigate();
+  const breakpoint = useBreakpoint();
+  const sidePad = breakpoint === 'mobile' ? 12 : 28;
   const open = (n: Notification) => {
     onClose();
     navigate(ROUTE[n.to]);
@@ -41,7 +44,7 @@ export function NotifMenu({ onClose }: NotifMenuProps) {
   );
 
   return (
-    <div className="a-pop" style={{ position: 'absolute', top: 48, right: 0, width: 380, maxWidth: '90vw', background: colors.panel, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-popover)', zIndex: 70, overflow: 'hidden' }}>
+    <div className="a-pop" style={{ position: 'fixed', top: 72, right: sidePad, width: 380, maxWidth: `calc(100vw - ${sidePad * 2}px)`, background: colors.panel, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-popover)', zIndex: 70, overflow: 'hidden' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: `1px solid ${colors.rule}` }}>
         <span style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 700 }}>Notifications</span>
         <LinkBtn size="xs">Mark all read</LinkBtn>

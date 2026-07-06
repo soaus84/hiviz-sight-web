@@ -1,5 +1,5 @@
 import { colors, type Tone } from '@/tokens';
-import { Avatar, Badge, Icon } from '@/components';
+import { Avatar, Badge } from '@/components';
 import type { Insight, InsightStatus } from '@/types';
 
 const STATUS: Record<InsightStatus, [string, Tone]> = {
@@ -32,7 +32,6 @@ export function InsightCard({ i, onClick, selected }: InsightCardProps) {
           {i.supporterInitials.slice(0, 3).map((sp, k) => <div key={k} style={{ marginLeft: k ? -7 : 0 }}><Avatar name={sp} size={22} ring /></div>)}
         </div>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600 }}>{i.observationCount} obs · {i.siteNames.length} site{i.siteNames.length > 1 ? 's' : ''}</span>
-        {i.routed && <span style={{ marginLeft: 'auto' }}><Icon name="lightbulb" size={15} color={colors.hiInk} fill={1} /></span>}
       </div>
     </div>
   );

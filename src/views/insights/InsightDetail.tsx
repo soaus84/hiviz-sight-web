@@ -1,9 +1,8 @@
 import { colors, type Tone } from '@/tokens';
-import { Card, Badge, Btn, Dot, AINote, Avatar, Icon, ListRow } from '@/components';
-import { OBSERVATIONS } from '@/data/observations';
-import { energyLabel } from '@/data/observations';
+import { Card, Badge, Btn, Dot, Avatar, Icon, ListRow } from '@/components';
+import { OBSERVATIONS, SIGNAL_DISPLAY, energyLabel } from '@/data/observations';
 import { INSIGHT_KIND_LABEL } from '@/data/insights';
-import type { Insight, InsightStatus } from '@/types';
+import type { Insight, InsightStatus, Observation } from '@/types';
 
 const STATUS: Record<InsightStatus, [string, Tone]> = {
   review: ['Awaiting support', 'warning'],
@@ -11,17 +10,32 @@ const STATUS: Record<InsightStatus, [string, Tone]> = {
   closed: ['Closed', 'success'],
 };
 
-const ROUTED_NOTE: Record<Insight['kind'], (i: Insight) => string> = {
-  critical_observation: () => 'Routed automatically — a single high-confidence observation, bypassing the trend threshold entirely.',
-  worksite_trend: (i) => `Routed automatically — ${i.observationCount} observation${i.observationCount > 1 ? 's' : ''} at this site in 14 days.`,
-  cross_site_pattern: (i) => `Routed automatically — ${i.observationCount} observation${i.observationCount > 1 ? 's' : ''} across ${i.siteNames.length} sites in 14 days.`,
-};
+/** "Same site" mock stand-in for insights with no explicitly linked
+ * observations yet — round-robins across the insight's sites (one from each
+ * before taking a second from any) so a cross-site pattern's evidence
+ * actually looks cross-site, instead of 3 examples that happen to share
+ * whichever site sorts first in the data. */
+function fallbackSourceObs(i: Insight): Observation[] {
+  const bySite = i.siteNames.map((s) => OBSERVATIONS.filter((o) => o.siteName === s));
+  const result: Observation[] = [];
+  for (let round = 0; result.length < 3; round++) {
+    const before = result.length;
+    for (const group of bySite) {
+      if (group[round]) result.push(group[round]);
+      if (result.length === 3) break;
+    }
+    if (result.length === before) break;
+  }
+  return result;
+}
 
-export function InsightDetail({ i }: { i: Insight }) {
+export function InsightDetail({ i, onOpenObservation }: { i: Insight; onOpenObservation: (obsId: string) => void }) {
   const hasDetail = !!i.suggested;
-  const srcObs = hasDetail
-    ? i.sourceObservations!
-    : OBSERVATIONS.filter((o) => i.siteNames.includes(o.siteName)).slice(0, 3).map((o) => ({ quote: o.summary, siteName: o.siteName, ago: o.when }));
+  // Prefer observations explicitly linked to this insight; only a handful of
+  // insights have that authored yet, so fall back to "same site" as a mock
+  // stand-in for the rest rather than showing nothing.
+  const linkedObs = OBSERVATIONS.filter((o) => o.linkedInsightId === i.id);
+  const srcObs = linkedObs.length > 0 ? linkedObs : fallbackSourceObs(i);
   const [sl, sh] = STATUS[i.status];
   const [kindLabel, kindTone] = INSIGHT_KIND_LABEL[i.kind];
 
@@ -40,12 +54,6 @@ export function InsightDetail({ i }: { i: Insight }) {
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
         {i.siteNames.map((s, k) => <Badge key={k} tone="primary" outline icon="place">{s}</Badge>)}
       </div>
-
-      {i.routed && (
-        <div style={{ marginTop: 18 }}>
-          <AINote title="Hiviz routed to pipeline">{ROUTED_NOTE[i.kind](i)}</AINote>
-        </div>
-      )}
 
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Pattern summary</div>
       <Card pad={16} style={{ boxShadow: 'none', marginBottom: 10 }}>
@@ -84,12 +92,26 @@ export function InsightDetail({ i }: { i: Insight }) {
         <span>Source observations</span><span style={{ color: colors.inkMuted }}>{srcObs.length}</span>
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {srcObs.map((o, k) => (
-          <div key={k} style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px' }}>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>“{o.quote}”</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, marginTop: 7, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{o.siteName} · {o.ago}</div>
-          </div>
-        ))}
+        {srcObs.map((o) => {
+          const s = SIGNAL_DISPLAY[o.signal_type];
+          return (
+            <div
+              key={o.id}
+              className="a-card-int"
+              onClick={() => onOpenObservation(o.id)}
+              style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10 }}
+            >
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>“{o.summary}”</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{o.siteName} · {o.when}</span>
+                  <Badge tone={s.tone}>{s.label}</Badge>
+                </div>
+              </div>
+              <Icon name="chevron_right" size={18} color={colors.inkMuted} style={{ marginTop: 2, flexShrink: 0 }} />
+            </div>
+          );
+        })}
       </div>
 
       {hasDetail && (
