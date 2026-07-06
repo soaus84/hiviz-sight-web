@@ -23,7 +23,6 @@ export function WorkspaceSwitcher({ active, collapsed, onNavigate }: WorkspaceSw
   return (
     <div style={{ position: 'relative', padding: collapsed ? '0 8px 14px' : '0 12px 14px' }}>
       <button
-        className="a-nav"
         onClick={() => setOpen((v) => !v)}
         title={collapsed ? `Workspace: ${active.label}` : undefined}
         style={{
@@ -31,18 +30,21 @@ export function WorkspaceSwitcher({ active, collapsed, onNavigate }: WorkspaceSw
           display: 'flex',
           alignItems: 'center',
           justifyContent: collapsed ? 'center' : 'flex-start',
-          gap: 9,
-          padding: collapsed ? '9px 0' : '9px 10px',
-          borderRadius: 'var(--radius-md)',
-          border: `1px solid ${colors.sideRule}`,
-          background: 'rgba(255,255,255,0.04)',
+          gap: 10,
+          padding: collapsed ? '10px 0' : '10px 12px',
+          borderRadius: 'var(--radius-lg)',
+          border: '1px solid rgba(255,255,255,0.14)',
+          background: colors.sidePanel,
           cursor: 'pointer',
         }}
       >
-        <Icon name={active.icon} size={17} color={colors.hi} fill={1} />
+        <Icon name={active.icon} size={18} color={colors.hi} fill={1} />
         {!collapsed && (
           <>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: '#fff', flex: 1, textAlign: 'left' }}>{active.label}</span>
+            <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
+              <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9, fontWeight: 700, letterSpacing: 0.6, textTransform: 'uppercase', color: colors.sideMuted }}>Workspace</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: '#fff', marginTop: 1 }}>{active.label}</div>
+            </div>
             <Icon name="unfold_more" size={16} color={colors.sideMuted} />
           </>
         )}

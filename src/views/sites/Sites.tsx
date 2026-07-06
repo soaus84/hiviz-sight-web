@@ -8,6 +8,7 @@ import { usePurviewScope } from '@/state/PurviewScope';
 import type { Site, Visibility } from '@/types';
 
 const VIZ_TONE: Record<Visibility, Tone> = { high: 'success', moderate: 'warning', low: 'error' };
+const VIZ_LABEL: Record<Visibility, string> = { high: 'High', moderate: 'Moderate', low: 'Low' };
 
 export function Sites() {
   const navigate = useNavigate();
@@ -32,8 +33,8 @@ export function Sites() {
         </div>
       </div>
     ) },
-    { key: 'visibility', label: 'Visibility', w: 150, render: (r) => <Badge tone={VIZ_TONE[r.visibility]}>{r.visibilityLabel}</Badge> },
-    { key: 'lastVisit', label: 'Last visit', w: 120, mono: true, render: (r) => <span style={{ color: r.lastVisitDays > 20 ? colors.red : colors.inkSoft }}>{r.lastVisit}</span> },
+    { key: 'visibility', label: 'Visibility', w: 150, render: (r) => <Badge tone={VIZ_TONE[r.visibility]}>{VIZ_LABEL[r.visibility]}</Badge> },
+    { key: 'lastVisit', label: 'Last visit', w: 150, mono: true, render: (r) => <span style={{ color: r.lastVisitDays > 20 ? colors.red : colors.inkSoft }}>{r.lastVisit}</span> },
     { key: 'openInsightsCount', label: 'Open insights', w: 120, align: 'left', mono: true, render: (r) => <span style={{ fontWeight: 700 }}>{r.openInsightsCount}</span> },
     { key: 'go', label: '', w: 44, align: 'right', render: () => <Icon name="chevron_right" size={18} color={colors.inkMuted} /> },
   ];
