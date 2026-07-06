@@ -1,10 +1,23 @@
 export type Visibility = 'high' | 'moderate' | 'low';
 export type AtrophyState = null | 'active' | 'elevated' | 'critical';
 
+export interface Contact {
+  id: string;
+  name: string;
+  role: string;
+  primary?: boolean;
+  status: string;
+  shift?: string;
+  phone: string;
+  radioChannel?: string;
+  email: string;
+}
+
 export interface Site {
   id: string;
   name: string;
   region: string;
+  division: string;
   type: string;
   visibility: Visibility;
   visibilityLabel: string;

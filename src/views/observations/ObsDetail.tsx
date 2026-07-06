@@ -1,14 +1,13 @@
 import { useNavigate } from 'react-router-dom';
-import { colors } from '@/tokens';
-import { IconBtn, SChip, AINote, Card } from '@/components';
+import { colors, type Tone } from '@/tokens';
+import { IconBtn, Badge, AINote, Card, Btn, Fact } from '@/components';
 import { SIGNAL_DISPLAY, energyLabel } from '@/data/observations';
-import { Fact } from './Fact';
 import type { Observation } from '@/types';
 
-const STATUS_LABEL: Record<Observation['status'], [string, string]> = {
-  enriched: ['Enriched', colors.hiInk],
-  classified: ['Classified', colors.green],
-  linked: ['Linked to insight', colors.blue],
+const STATUS_LABEL: Record<Observation['status'], [string, Tone]> = {
+  enriched: ['Enriched', 'primary'],
+  classified: ['Classified', 'success'],
+  linked: ['Linked to insight', 'info'],
 };
 
 export function ObsDetail({ o, onClose }: { o: Observation; onClose: () => void }) {
@@ -26,8 +25,8 @@ export function ObsDetail({ o, onClose }: { o: Observation; onClose: () => void 
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 22px', borderBottom: `1px solid ${colors.rule}` }}>
-        <SChip hue={s.hue}>{s.label}</SChip>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: colors.inkSoft }}>{o.id}</span>
+        <Badge tone={s.tone}>{s.label}</Badge>
+        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: colors.inkSoft, flex: 1 }}>{o.id}</span>
         <IconBtn name="close" onClick={onClose} />
       </div>
       <div className="a-scroll" style={{ flex: 1, overflowY: 'auto', padding: 22 }}>
@@ -37,8 +36,8 @@ export function ObsDetail({ o, onClose }: { o: Observation; onClose: () => void 
         <div style={{ marginTop: 18 }}>
           <AINote title="Hiviz classification">
             <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: 9 }}>
-              <SChip hue={colors.ink}>{energyLabel(o.energy_type)}</SChip>
-              <SChip hue={s.hue}>{o.signal_type}</SChip>
+              <Badge tone="primary" outline>{energyLabel(o.energy_type)}</Badge>
+              <Badge tone={s.tone} outline>{o.signal_type}</Badge>
             </div>
             {classificationNote}
           </AINote>
@@ -55,13 +54,9 @@ export function ObsDetail({ o, onClose }: { o: Observation; onClose: () => void 
 
         {o.status === 'linked' && o.linkedInsightId && (
           <div style={{ marginTop: 16 }}>
-            <button
-              onClick={() => { onClose(); navigate(`/insights/${o.linkedInsightId}`); }}
-              className="a-btn a-btn-ghost"
-              style={{ fontFamily: 'var(--font-sans)', width: '100%', height: 38, borderRadius: 'var(--radius-md)', background: 'transparent', color: colors.ink, border: `1px solid ${colors.rule}`, fontSize: 13.5, fontWeight: 700, cursor: 'pointer', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 7 }}
-            >
+            <Btn variant="ghost" full onClick={() => { onClose(); navigate(`/insights/${o.linkedInsightId}`); }}>
               View the linked insight
-            </button>
+            </Btn>
           </div>
         )}
       </div>

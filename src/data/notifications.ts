@@ -3,7 +3,7 @@ import type { Notification } from '@/types';
 
 export const NOTIFS: { today: Notification[]; earlier: Notification[] } = {
   today: [
-    { id: 'n1', tone: colors.hiInk, chip: 'hi', icon: 'auto_awesome', unread: true, subject: 'Hiviz', verb: 'routed a new cross-site pattern to your pipeline', detail: 'Heat-plan non-compliance — 4 thermal events across 3 sites in 14 days.', when: '18m', to: 'insights' },
+    { id: 'n1', tone: colors.hiInk, chip: 'hi', icon: 'lightbulb', unread: true, subject: 'Hiviz', verb: 'routed a new cross-site pattern to your pipeline', detail: 'Heat-plan non-compliance — 4 thermal events across 3 sites in 14 days.', when: '18m', to: 'insights' },
     { id: 'n2', tone: colors.amber, icon: 'flag', unread: true, subject: 'Pre-start checks slipping', verb: 'needs your support to move to action', detail: '7 observations · Northgate, Marlow, Brookman.', when: '1h', to: 'insights' },
     { id: 'n3', tone: colors.ink, icon: 'event', unread: true, subject: 'Ridgeback Processing', verb: 'visit starts in 2 hours', detail: 'Thu 8 · 09:30 — briefing ready.', when: '2h', to: 'visits' },
   ],

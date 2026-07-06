@@ -2,9 +2,9 @@ html, body {
   margin: 0;
   padding: 0;
   height: 100%;
-  background: var(--color-bg);
+  background: #FAFAF7;
   font-family: var(--font-sans);
-  color: var(--color-ink);
+  color: #0A0A0A;
 }
 * {
   box-sizing: border-box;

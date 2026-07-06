@@ -2,16 +2,15 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { PageHead, Tabs, Btn, Avatar, SChip, Icon } from '@/components';
-import { INSIGHTS, INSIGHTS_BY_ID } from '@/data/insights';
+import { PageHead, Tabs, Pills, Btn, IconBtn, LinkBtn } from '@/components';
+import { INSIGHTS, INSIGHTS_BY_ID, insightInRegion } from '@/data/insights';
+import { purviewPhrase } from '@/data/purview';
+import { usePurviewScope } from '@/state/PurviewScope';
 import { InsightDetail } from './InsightDetail';
+import { InsightCard } from './InsightCard';
+import { InsightsBoard } from './InsightsBoard';
+import { insightsFitToHeight, type InsightsView } from './insightsLayout';
 import type { InsightStatus } from '@/types';
-
-const STATUS: Record<InsightStatus, [string, string]> = {
-  review: ['Awaiting support', colors.amber],
-  action: ['In action', colors.hiInk],
-  closed: ['Closed', colors.green],
-};
 
 const VALID_TABS: InsightStatus[] = ['review', 'action', 'closed'];
 function isInsightStatus(v: string | null): v is InsightStatus {
@@ -23,6 +22,21 @@ export function Insights() {
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const breakpoint = useBreakpoint();
+  const { region, division } = usePurviewScope();
+
+  const view: InsightsView = params.get('view') === 'board' ? 'board' : 'list';
+  const setView = (v: InsightsView) => {
+    const next = new URLSearchParams(params);
+    if (v === 'list') next.delete('view'); else next.set('view', v);
+    setParams(next, { replace: true });
+  };
+
+  const assigned = params.get('assigned') === 'unassigned' ? 'unassigned' : 'all';
+  const setAssigned = (k: string) => {
+    const next = new URLSearchParams(params);
+    if (k === 'all') next.delete('assigned'); else next.set('assigned', k);
+    setParams(next, { replace: true });
+  };
 
   const deepLinked = id ? INSIGHTS_BY_ID[id] : undefined;
   const tabParam = params.get('tab');
@@ -36,16 +50,27 @@ export function Insights() {
     }
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
+  const inRegion = useMemo(() => INSIGHTS.filter((i) => insightInRegion(i, { region, division })), [region, division]);
+
   const counts = {
-    review: INSIGHTS.filter((i) => i.status === 'review').length,
-    action: INSIGHTS.filter((i) => i.status === 'action').length,
-    closed: INSIGHTS.filter((i) => i.status === 'closed').length,
+    review: inRegion.filter((i) => i.status === 'review').length,
+    action: inRegion.filter((i) => i.status === 'action').length,
+    closed: inRegion.filter((i) => i.status === 'closed').length,
   };
-  const list = useMemo(() => INSIGHTS.filter((i) => i.status === tab), [tab]);
+  const unassignedInTab = inRegion.filter((i) => i.status === tab && !i.owner).length;
+  const unassignedTotal = inRegion.filter((i) => !i.owner).length;
+  const list = useMemo(() => inRegion.filter((i) => i.status === tab && (assigned === 'all' || !i.owner)), [inRegion, tab, assigned]);
 
   useEffect(() => {
-    if (!list.find((i) => i.id === selId)) setSelId(list[0]?.id ?? null);
-  }, [tab]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (list.find((i) => i.id === selId)) return;
+    // Desktop always keeps a detail selected (two-column master-detail).
+    // Below desktop, switching tabs should land back on the list, not
+    // silently jump into whichever item happens to be first. Re-runs on
+    // breakpoint change too, so resizing into desktop with nothing selected
+    // (e.g. landing on mobile before layout measures, then widening) doesn't
+    // leave the detail pane permanently empty.
+    setSelId(breakpoint === 'desktop' ? (list[0]?.id ?? null) : null);
+  }, [tab, breakpoint, assigned]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const sel = INSIGHTS.find((i) => i.id === selId);
 
@@ -60,56 +85,91 @@ export function Insights() {
     navigate(`/insights/${cardId}`, { replace: true });
   };
 
-  const showList = breakpoint !== 'mobile' || !sel;
-  const showDetail = breakpoint !== 'mobile' || !!sel;
-  const gridCols = breakpoint === 'desktop' ? '360px 1fr' : '1fr';
+  // Below desktop, the list can no longer share the row with the detail panel
+  // (it would either squeeze both or stack them awkwardly) — so list and
+  // detail become two full-width steps, with the detail covering the list.
+  const singleColumn = breakpoint !== 'desktop';
+  const showList = !singleColumn || !sel;
+  const showDetail = !singleColumn || !!sel;
+  const gridCols = singleColumn ? '1fr' : '360px 1fr';
+
+  // On desktop, the detail pane should fit within the viewport with its own
+  // scroll instead of pushing the whole page (list included) down when its
+  // content is tall. Below desktop, list/detail are already two full-page
+  // steps, so normal page scroll is the simpler, more standard behavior.
+  // The board is a horizontal-scrolling read view, not a two-pane
+  // master-detail, so it always uses normal page scroll regardless of view.
+  const fitToHeight = insightsFitToHeight(view, breakpoint);
 
   return (
-    <div>
-      {breakpoint === 'mobile' && sel ? (
-        <button onClick={() => { setSelId(null); navigate('/insights'); }} className="a-link" style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: colors.inkSoft, background: 'none', border: 'none', cursor: 'pointer', display: 'inline-flex', alignItems: 'center', gap: 6, marginBottom: 16, textTransform: 'uppercase', letterSpacing: 0.6 }}>
-          <Icon name="arrow_back" size={16} /> All insights
-        </button>
+    <div style={{ height: fitToHeight ? '100%' : undefined, display: fitToHeight ? 'flex' : undefined, flexDirection: fitToHeight ? 'column' : undefined }}>
+      {singleColumn && sel && view === 'list' ? (
+        <LinkBtn icon="arrow_back" size="md" onClick={() => { setSelId(null); navigate('/insights'); }} style={{ marginBottom: 16 }}>All insights</LinkBtn>
       ) : (
         <>
-          <PageHead title="Insights" sub="Cross-site patterns Hiviz has surfaced from the field. Review, support and route them to action." actions={<Btn variant="ghost" icon="download">Report</Btn>} />
-          <Tabs value={tab} onChange={setTab} items={[{ k: 'review', label: 'For review', n: counts.review }, { k: 'action', label: 'In action', n: counts.action }, { k: 'closed', label: 'Closed', n: counts.closed }]} />
+          <PageHead
+            title="Insights"
+            sub={`Cross-site patterns Hiviz has surfaced from ${purviewPhrase(region, division)}. Review, support and route them to action.`}
+            actions={
+              <>
+                <IconBtn name="view_list" active={view === 'list'} onClick={() => setView('list')} />
+                <IconBtn name="view_kanban" active={view === 'board'} onClick={() => setView('board')} />
+                <Btn variant="ghost" icon="download">Report</Btn>
+              </>
+            }
+          />
+          {view === 'list' && (
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap', marginBottom: 20 }}>
+              <Tabs value={tab} onChange={setTab} items={[{ k: 'review', label: 'For review', n: counts.review }, { k: 'action', label: 'In action', n: counts.action }, { k: 'closed', label: 'Closed', n: counts.closed }]} />
+              <Pills value={assigned} onChange={setAssigned} items={[{ k: 'all', label: 'All' }, { k: 'unassigned', label: 'Unassigned', n: unassignedInTab }]} />
+            </div>
+          )}
+          {view === 'board' && (
+            <div style={{ marginBottom: 16 }}>
+              <Pills value={assigned} onChange={setAssigned} items={[{ k: 'all', label: 'All' }, { k: 'unassigned', label: 'Unassigned', n: unassignedTotal }]} />
+            </div>
+          )}
         </>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: gridCols, gap: 16, alignItems: 'start' }}>
-        {showList && (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {list.map((i) => {
-              const on = i.id === selId;
-              const [sl, sh] = STATUS[i.status];
-              return (
-                <div
-                  key={i.id}
-                  onClick={() => selectCard(i.id)}
-                  className="a-card-int"
-                  style={{ background: colors.panel, border: `1px solid ${on ? colors.ink : colors.rule}`, borderRadius: 'var(--radius-lg)', padding: 15, cursor: 'pointer', boxShadow: on ? 'var(--shadow-rail)' : 'none' }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-                    <SChip hue={sh}>{sl}</SChip>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: colors.inkMuted, marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: 0.5 }}>{i.theme}</span>
-                  </div>
-                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14.5, fontWeight: 700, letterSpacing: -0.2, lineHeight: 1.3 }}>{i.title}</div>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 11 }}>
-                    <div style={{ display: 'flex' }}>
-                      {i.supporterInitials.slice(0, 3).map((sp, k) => <div key={k} style={{ marginLeft: k ? -7 : 0 }}><Avatar name={sp} size={22} ring /></div>)}
-                    </div>
-                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600 }}>{i.observationCount} obs · {i.siteNames.length} site{i.siteNames.length > 1 ? 's' : ''}</span>
-                    {i.routed && <span style={{ marginLeft: 'auto' }}><Icon name="auto_awesome" size={15} color={colors.hiInk} fill={1} /></span>}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+      {view === 'board' ? (
+        <InsightsBoard insights={assigned === 'all' ? inRegion : inRegion.filter((i) => !i.owner)} onOpen={selectCard} />
+      ) : (
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: gridCols,
+            gap: 16,
+            alignItems: fitToHeight ? 'stretch' : 'start',
+            flex: fitToHeight ? 1 : undefined,
+            minHeight: fitToHeight ? 0 : undefined,
+          }}
+        >
+          {showList && (
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: 10,
+                overflowY: fitToHeight ? 'auto' : undefined,
+                minHeight: fitToHeight ? 0 : undefined,
+                paddingRight: fitToHeight ? 2 : undefined,
+              }}
+            >
+              {list.length === 0 && (
+                <div style={{ padding: '24px 4px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>No insights in {purviewPhrase(region, division)} for this tab.</div>
+              )}
+              {list.map((i) => <InsightCard key={i.id} i={i} selected={i.id === selId} onClick={() => selectCard(i.id)} />)}
+            </div>
+          )}
 
-        {showDetail && sel && <InsightDetail i={sel} />}
-      </div>
+          {showDetail && sel && (
+            <div style={{ overflowY: fitToHeight ? 'auto' : undefined, minHeight: fitToHeight ? 0 : undefined }}>
+              <InsightDetail i={sel} />
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

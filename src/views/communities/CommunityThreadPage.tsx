@@ -1,7 +1,10 @@
-import { THREAD } from '@/data/communities';
+import { useParams } from 'react-router-dom';
+import { POSTS, THREADS } from '@/data/communities';
 import { ThreadView } from './ThreadView';
 
-// Mock data only has one full thread example; a real backend would fetch by :id.
 export function CommunityThreadPage() {
-  return <ThreadView t={THREAD} />;
+  const { id } = useParams();
+  const post = POSTS.find((p) => p.id === id) ?? POSTS[0];
+  const extra = THREADS[post.id];
+  return <ThreadView post={post} question={extra?.question} replies={extra?.replies ?? []} />;
 }

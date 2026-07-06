@@ -25,15 +25,14 @@ export type ColorToken = keyof typeof colors;
 /** Soft-tinted chip background: status hex + ~10% alpha suffix. */
 export const softTone = (hex: string) => `${hex}1A`;
 
-export type Tone = 'red' | 'amber' | 'green' | 'blue' | 'ink' | 'hi' | 'soft';
+export type Tone = 'error' | 'warning' | 'success' | 'info' | 'primary' | 'hi';
 
 /** tone key -> [background, foreground] for solid Badge chips. */
 export const TONE: Record<Tone, [string, string]> = {
-  red: [colors.red, '#FFFFFF'],
-  amber: [colors.amber, '#FFFFFF'],
-  green: [colors.green, '#FFFFFF'],
-  blue: [colors.blue, '#FFFFFF'],
-  ink: [colors.ink, '#FFFFFF'],
+  error: [colors.red, '#FFFFFF'],
+  warning: [colors.amber, '#FFFFFF'],
+  success: [colors.green, '#FFFFFF'],
+  info: [colors.blue, '#FFFFFF'],
+  primary: [colors.ink, '#FFFFFF'],
   hi: [colors.hi, colors.hiInk],
-  soft: [colors.fill, colors.inkSoft],
 };

@@ -16,7 +16,7 @@ export interface TabsProps {
 export function Tabs({ items, value, onChange }: TabsProps) {
   const touch = useBreakpoint() !== 'desktop';
   return (
-    <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${colors.rule}`, marginBottom: 22, overflowX: 'auto' }}>
+    <div style={{ display: 'flex', gap: 24, borderBottom: `1px solid ${colors.rule}`, marginBottom: 22, overflowX: 'auto', overflowY: 'hidden' }}>
       {items.map((it) => {
         const on = it.k === value;
         return (

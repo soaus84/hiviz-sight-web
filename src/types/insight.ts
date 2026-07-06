@@ -2,6 +2,14 @@ import type { EnergyType } from './observation';
 
 export type InsightStatus = 'review' | 'action' | 'closed';
 
+// Mirrors the trigger_source → card label mapping in
+// specs/features/CRITICAL-INSIGHT.md: a site-level algorithm trigger reads
+// as "Worksite Trend", region/division/organisation-level (or an
+// atrophy_pattern trigger) reads as "Cross-site Pattern", and a single
+// high-confidence critical_observation trigger bypasses the trend threshold
+// entirely and reads as "Critical Observation".
+export type InsightKind = 'worksite_trend' | 'cross_site_pattern' | 'critical_observation';
+
 export type FwFactor =
   // guide
   | 'senior_leadership'
@@ -47,6 +55,7 @@ export interface Endorsement {
 export interface Insight {
   id: string;
   status: InsightStatus;
+  kind: InsightKind;
   theme: string;
   title: string;
   summary: string;
@@ -55,6 +64,7 @@ export interface Insight {
   supporterInitials: string[];
   energyTypes: EnergyType[];
   updated: string;
+  updatedAt: string;
   routed?: boolean;
   cause?: string;
   /** Human-approval flag — true once routed for crew-facing action, never auto-set. */

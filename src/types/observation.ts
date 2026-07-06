@@ -39,4 +39,5 @@ export interface Observation {
   cleared_for_sharing: boolean;
   sharing_scope: SharingScope;
   linkedInsightId?: string;
+  visitId?: string;
 }

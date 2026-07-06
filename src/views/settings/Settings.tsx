@@ -2,7 +2,7 @@ import { useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { PageHead, Tabs, Card, Eyebrow, Avatar } from '@/components';
-import { CURRENT_USER } from '@/data/currentUser';
+import { useActiveUser } from '@/state/ActiveUser';
 import { USERS } from '@/data/users';
 import { SettingRow } from './SettingRow';
 import { UsersTable } from './UsersTable';
@@ -11,6 +11,7 @@ type SettingsTab = 'account' | 'notifications' | 'access';
 const VALID_TABS: SettingsTab[] = ['account', 'notifications', 'access'];
 
 export function Settings() {
+  const { user: CURRENT_USER } = useActiveUser();
   const [params, setParams] = useSearchParams();
   const breakpoint = useBreakpoint();
   const tabParam = params.get('tab');
@@ -30,7 +31,9 @@ export function Settings() {
               <Avatar name={CURRENT_USER.name} size={56} tone={colors.hi} />
               <div>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 18, fontWeight: 700 }}>{CURRENT_USER.name}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, marginTop: 2, fontWeight: 500 }}>{CURRENT_USER.role} · {CURRENT_USER.region}</div>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, marginTop: 2, fontWeight: 500 }}>
+                  {[CURRENT_USER.role, CURRENT_USER.region, CURRENT_USER.division].filter(Boolean).join(' · ')}
+                </div>
               </div>
             </div>
             <div style={{ marginTop: 18 }}>

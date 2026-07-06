@@ -11,13 +11,17 @@ export interface Visit {
   id: string;
   siteName: string;
   region: string;
+  division: string;
   visitor: string;
   when: string;
   date: string;
+  time?: string;
   state: VisitState;
   elapsed?: string;
   observationCount: number;
   signals?: SignalCounts;
   briefing?: BriefingStatus;
   ledToInsight?: boolean;
+  focusNotes?: string;
+  relatedInsightIds?: string[];
 }

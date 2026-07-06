@@ -1,13 +1,20 @@
-import { colors } from '@/tokens';
-import { Card, SChip, Btn, Dot, AINote, Avatar, Icon } from '@/components';
+import { colors, type Tone } from '@/tokens';
+import { Card, Badge, Btn, Dot, AINote, Avatar, Icon, ListRow } from '@/components';
 import { OBSERVATIONS } from '@/data/observations';
 import { energyLabel } from '@/data/observations';
+import { INSIGHT_KIND_LABEL } from '@/data/insights';
 import type { Insight, InsightStatus } from '@/types';
 
-const STATUS: Record<InsightStatus, [string, string]> = {
-  review: ['Awaiting support', colors.amber],
-  action: ['In action', colors.hiInk],
-  closed: ['Closed', colors.green],
+const STATUS: Record<InsightStatus, [string, Tone]> = {
+  review: ['Awaiting support', 'warning'],
+  action: ['In action', 'primary'],
+  closed: ['Closed', 'success'],
+};
+
+const ROUTED_NOTE: Record<Insight['kind'], (i: Insight) => string> = {
+  critical_observation: () => 'Routed automatically — a single high-confidence observation, bypassing the trend threshold entirely.',
+  worksite_trend: (i) => `Routed automatically — ${i.observationCount} observation${i.observationCount > 1 ? 's' : ''} at this site in 14 days.`,
+  cross_site_pattern: (i) => `Routed automatically — ${i.observationCount} observation${i.observationCount > 1 ? 's' : ''} across ${i.siteNames.length} sites in 14 days.`,
 };
 
 export function InsightDetail({ i }: { i: Insight }) {
@@ -16,15 +23,14 @@ export function InsightDetail({ i }: { i: Insight }) {
     ? i.sourceObservations!
     : OBSERVATIONS.filter((o) => i.siteNames.includes(o.siteName)).slice(0, 3).map((o) => ({ quote: o.summary, siteName: o.siteName, ago: o.when }));
   const [sl, sh] = STATUS[i.status];
+  const [kindLabel, kindTone] = INSIGHT_KIND_LABEL[i.kind];
 
   return (
     <Card pad={24}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        <SChip hue={sh}>{sl}</SChip>
+        <Badge tone={sh}>{sl}</Badge>
+        <Badge tone={kindTone} outline>{kindLabel}</Badge>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, fontWeight: 700, color: colors.inkSoft }}>{i.id}</span>
-        <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-          · {i.siteNames.length > 1 ? 'Cross-site pattern' : 'Site pattern'}
-        </span>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
           {i.status === 'review' && <Btn variant="primary" size="sm" icon="check">Support for action</Btn>}
           {i.status === 'action' && <Btn variant="ghost" size="sm" icon="person_add">Assign owner</Btn>}
@@ -32,14 +38,12 @@ export function InsightDetail({ i }: { i: Insight }) {
       </div>
       <h2 style={{ fontFamily: 'var(--font-sans)', margin: 0, fontSize: 23, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1.2 }}>{i.title}</h2>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
-        {i.siteNames.map((s, k) => <SChip key={k} hue={colors.inkSoft} icon="place">{s}</SChip>)}
+        {i.siteNames.map((s, k) => <Badge key={k} tone="primary" outline icon="place">{s}</Badge>)}
       </div>
 
       {i.routed && (
         <div style={{ marginTop: 18 }}>
-          <AINote title="Hiviz routed to pipeline">
-            Routed automatically — {i.observationCount} unwanted energy events across {i.siteNames.length} sites in 14 days. Barrier assessment flagged degradation on most observations.
-          </AINote>
+          <AINote title="Hiviz routed to pipeline">{ROUTED_NOTE[i.kind](i)}</AINote>
         </div>
       )}
 
@@ -73,7 +77,7 @@ export function InsightDetail({ i }: { i: Insight }) {
 
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Energy classification</div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-        {i.energyTypes.map((e, k) => <SChip key={k} hue={e === 'none' ? colors.amber : colors.red}>{energyLabel(e)}</SChip>)}
+        {i.energyTypes.map((e, k) => <Badge key={k} tone={e === 'none' ? 'warning' : 'error'} outline>{energyLabel(e)}</Badge>)}
       </div>
 
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px', display: 'flex', justifyContent: 'space-between' }}>
@@ -109,13 +113,13 @@ export function InsightDetail({ i }: { i: Insight }) {
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Support for action</div>
       <div style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '4px 14px' }}>
         {(hasDetail ? i.endorsements! : i.supporterInitials.map((s) => ({ name: s, note: 'Backing this for action.' }))).map((e, k, arr) => (
-          <div key={k} style={{ display: 'flex', gap: 12, padding: '12px 0', borderBottom: k === arr.length - 1 ? 'none' : `1px solid ${colors.ruleSoft}` }}>
+          <ListRow key={k} last={k === arr.length - 1} padding="12px 0">
             <Avatar name={e.name} size={32} />
             <div style={{ flex: 1, minWidth: 0 }}>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 700 }}>{e.name}</div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, marginTop: 2, lineHeight: 1.45, fontWeight: 500 }}>{e.note}</div>
             </div>
-          </div>
+          </ListRow>
         ))}
       </div>
     </Card>

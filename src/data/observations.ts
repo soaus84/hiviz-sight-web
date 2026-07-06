@@ -1,13 +1,13 @@
 import type { EnergyType, Observation, SignalType } from '@/types';
-import { colors } from '@/tokens';
+import type { Tone } from '@/tokens';
 import { SITE_ID_BY_NAME } from './sites';
 
-export const SIGNAL_DISPLAY: Record<SignalType, { label: string; hue: string }> = {
-  positive_performance: { label: 'Positive', hue: colors.green },
-  weak_signal: { label: 'Weak signal', hue: colors.amber },
-  at_risk_condition: { label: 'At-risk condition', hue: colors.amber },
-  unwanted_energy_event: { label: 'Unwanted energy event', hue: colors.red },
-  barrier_failure: { label: 'Barrier failure', hue: colors.red },
+export const SIGNAL_DISPLAY: Record<SignalType, { label: string; tone: Tone }> = {
+  positive_performance: { label: 'Positive', tone: 'success' },
+  weak_signal: { label: 'Weak signal', tone: 'warning' },
+  at_risk_condition: { label: 'At-risk condition', tone: 'warning' },
+  unwanted_energy_event: { label: 'Unwanted energy event', tone: 'error' },
+  barrier_failure: { label: 'Barrier failure', tone: 'error' },
 };
 
 function site(name: string) {
@@ -15,9 +15,10 @@ function site(name: string) {
 }
 
 export const OBSERVATIONS: Observation[] = [
-  { id: 'OB-5821', when: 'Today 09:14', occurredAt: '2025-05-07T09:14:00', ...site('Northgate Open Cut'), observerName: 'Jordan Marsh', summary: 'Spotter not in position when an excavator began reversing near the live haul road — work stopped on the radio.', signal_type: 'barrier_failure', energy_type: 'kinetic', status: 'enriched', cleared_for_sharing: true, sharing_scope: 'region' },
-  { id: 'OB-5820', when: 'Today 08:58', occurredAt: '2025-05-07T08:58:00', ...site('Northgate Open Cut'), observerName: 'Jordan Marsh', summary: 'Pre-start walked thoroughly, two housekeeping items raised and actioned before shift.', signal_type: 'positive_performance', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site' },
-  { id: 'OB-5819', when: 'Today 08:51', occurredAt: '2025-05-07T08:51:00', ...site('Northgate Open Cut'), observerName: 'K. Lee', summary: 'Water station undersupplied for the forecast 39°C peak — flagged to crib hut.', signal_type: 'weak_signal', energy_type: 'thermal', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site' },
+  { id: 'OB-5822', when: 'Today 07:40', occurredAt: '2025-05-07T07:40:00', ...site('Northgate Open Cut'), observerName: 'K. Lee', summary: 'First aid kit at bay 3 missing a restock tag — flagged for check at smoko.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v1' },
+  { id: 'OB-5821', when: 'Today 09:14', occurredAt: '2025-05-07T09:14:00', ...site('Northgate Open Cut'), observerName: 'Jordan Marsh', summary: 'Spotter not in position when an excavator began reversing near the live haul road — work stopped on the radio.', signal_type: 'barrier_failure', energy_type: 'kinetic', status: 'linked', cleared_for_sharing: true, sharing_scope: 'region', linkedInsightId: 'INS-2210', visitId: 'v1' },
+  { id: 'OB-5820', when: 'Today 08:58', occurredAt: '2025-05-07T08:58:00', ...site('Northgate Open Cut'), observerName: 'Jordan Marsh', summary: 'Pre-start walked thoroughly, two housekeeping items raised and actioned before shift.', signal_type: 'positive_performance', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v1' },
+  { id: 'OB-5819', when: 'Today 08:51', occurredAt: '2025-05-07T08:51:00', ...site('Northgate Open Cut'), observerName: 'K. Lee', summary: 'Water station undersupplied for the forecast 39°C peak — flagged to crib hut.', signal_type: 'weak_signal', energy_type: 'thermal', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v1' },
   { id: 'OB-5814', when: 'Yest 15:12', occurredAt: '2025-05-06T15:12:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'No shaded break observed at the fuel bay during the afternoon heat window.', signal_type: 'weak_signal', energy_type: 'thermal', status: 'linked', cleared_for_sharing: true, sharing_scope: 'region', linkedInsightId: 'INS-2204' },
   { id: 'OB-5810', when: 'Yest 14:38', occurredAt: '2025-05-06T14:38:00', ...site('Coolinga Plant'), observerName: 'D. Whitlock', summary: 'Dozer 4 crew did not rotate at the scheduled hydration break on a 38°C afternoon.', signal_type: 'barrier_failure', energy_type: 'thermal', status: 'linked', cleared_for_sharing: true, sharing_scope: 'region', linkedInsightId: 'INS-2204' },
   { id: 'OB-5807', when: 'Yest 11:02', occurredAt: '2025-05-06T11:02:00', ...site('Ridgeback Processing'), observerName: 'A. Pereira', summary: 'Temperature hit 40°C at 11:00 with no work stop — crew continuing ore loading.', signal_type: 'barrier_failure', energy_type: 'thermal', status: 'linked', cleared_for_sharing: true, sharing_scope: 'region', linkedInsightId: 'INS-2204' },
@@ -25,6 +26,36 @@ export const OBSERVATIONS: Observation[] = [
   { id: 'OB-5798', when: '2d ago', occurredAt: '2025-05-05T00:00:00', ...site('Jewell Crusher'), observerName: 'M. Okafor', summary: 'Spotter standing inside the marked exclusion zone during truck reversing at the crusher.', signal_type: 'barrier_failure', energy_type: 'kinetic', status: 'linked', cleared_for_sharing: true, sharing_scope: 'region', linkedInsightId: 'INS-2198' },
   { id: 'OB-5790', when: '4d ago', occurredAt: '2025-05-03T00:00:00', ...site('Brookman Pit 2'), observerName: 'R. Bridges', summary: 'Two pre-starts unsigned at the start of the day shift after handover.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site' },
   { id: 'OB-5786', when: '6d ago', occurredAt: '2025-05-01T00:00:00', ...site('Northgate Open Cut'), observerName: 'A. Patel', summary: 'Loader pre-start skipped after the shift handover — caught at the 06:42 walkaround.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site' },
+
+  // v5 — Northgate Open Cut, Mon 5 May (2d ago) — past visit that led to an insight
+  { id: 'OB-5780', when: '2d ago', occurredAt: '2025-05-05T06:52:00', ...site('Northgate Open Cut'), observerName: 'J. Morrow', summary: 'Loader operator called a full stop to reposition a spotter before reversing near the workshop.', signal_type: 'positive_performance', energy_type: 'kinetic', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v5' },
+  { id: 'OB-5779', when: '2d ago', occurredAt: '2025-05-05T07:10:00', ...site('Northgate Open Cut'), observerName: 'K. Lee', summary: 'New 2-minute radio handoff completed cleanly at shift change, both crews confirmed on channel 4.', signal_type: 'positive_performance', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v5' },
+  { id: 'OB-5778', when: '2d ago', occurredAt: '2025-05-05T07:15:00', ...site('Northgate Open Cut'), observerName: 'J. Morrow', summary: 'Handover log signed but time-stamped 12 minutes after shift start.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v5' },
+  { id: 'OB-5777', when: '2d ago', occurredAt: '2025-05-05T07:32:00', ...site('Northgate Open Cut'), observerName: 'A. Patel', summary: 'Two pre-start sheets missing a supervisor countersign at the loader bay.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v5' },
+  { id: 'OB-5776', when: '2d ago', occurredAt: '2025-05-05T08:05:00', ...site('Northgate Open Cut'), observerName: 'J. Morrow', summary: 'Exclusion zone signage at the crusher approach faded and hard to read in low light.', signal_type: 'weak_signal', energy_type: 'kinetic', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v5' },
+  { id: 'OB-5775', when: '2d ago', occurredAt: '2025-05-05T08:40:00', ...site('Northgate Open Cut'), observerName: 'K. Lee', summary: 'Reversing alarm on Loader 3 intermittent — logged for maintenance, unit pulled from roster.', signal_type: 'barrier_failure', energy_type: 'kinetic', status: 'enriched', cleared_for_sharing: true, sharing_scope: 'region', visitId: 'v5' },
+
+  // v6 — Ridgeback Processing, Thu 1 May (6d ago)
+  { id: 'OB-5774', when: '6d ago', occurredAt: '2025-05-01T09:05:00', ...site('Ridgeback Processing'), observerName: 'A. Pereira', summary: 'Crew paused ore loading voluntarily when ambient hit 39°C, called their own hydration break.', signal_type: 'positive_performance', energy_type: 'thermal', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v6' },
+  { id: 'OB-5773', when: '6d ago', occurredAt: '2025-05-01T09:40:00', ...site('Ridgeback Processing'), observerName: 'A. Pereira', summary: 'Fuel bay shade cloth showing wear — flagged for replacement before next hot spell.', signal_type: 'weak_signal', energy_type: 'thermal', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v6' },
+  { id: 'OB-5772', when: '6d ago', occurredAt: '2025-05-01T10:10:00', ...site('Ridgeback Processing'), observerName: 'A. Pereira', summary: 'Two housekeeping items open from last shift still unresolved at handover.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v6' },
+  { id: 'OB-5771', when: '6d ago', occurredAt: '2025-05-01T11:20:00', ...site('Ridgeback Processing'), observerName: 'A. Pereira', summary: 'Loader crew continued through the 38°C threshold before the rostered break — no stop called.', signal_type: 'barrier_failure', energy_type: 'thermal', status: 'classified', cleared_for_sharing: true, sharing_scope: 'region', visitId: 'v6' },
+
+  // v7 — Marlow Stockyard, Tue 29 Apr (8d ago)
+  { id: 'OB-5770', when: '8d ago', occurredAt: '2025-04-29T07:15:00', ...site('Marlow Stockyard'), observerName: 'D. Cole', summary: 'Yard crew re-positioned the spotter before the reversing sequence began — textbook stop-work call.', signal_type: 'positive_performance', energy_type: 'kinetic', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v7' },
+  { id: 'OB-5769', when: '8d ago', occurredAt: '2025-04-29T08:00:00', ...site('Marlow Stockyard'), observerName: 'D. Cole', summary: 'Housekeeping walk found the yard clear and tidy, nothing raised.', signal_type: 'positive_performance', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v7' },
+  { id: 'OB-5768', when: '8d ago', occurredAt: '2025-04-29T08:45:00', ...site('Marlow Stockyard'), observerName: 'D. Cole', summary: 'New tag-out board in use at the workshop, crew using it correctly without prompting.', signal_type: 'positive_performance', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v7' },
+  { id: 'OB-5767', when: '8d ago', occurredAt: '2025-04-29T09:30:00', ...site('Marlow Stockyard'), observerName: 'D. Cole', summary: 'Stockpile edge marking faded on the eastern boundary — flagged for repaint.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v7' },
+  { id: 'OB-5766', when: '8d ago', occurredAt: '2025-04-29T10:00:00', ...site('Marlow Stockyard'), observerName: 'D. Cole', summary: 'Radio check at shift change ran two minutes over the new protocol window.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v7' },
+
+  // v8 — Coolinga Plant, Mon 28 Apr (9d ago)
+  { id: 'OB-5765', when: '9d ago', occurredAt: '2025-04-28T06:50:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'Conveyor walkway tools all tethered correctly during the gantry walk-through.', signal_type: 'positive_performance', energy_type: 'gravitational', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v8' },
+  { id: 'OB-5764', when: '9d ago', occurredAt: '2025-04-28T07:20:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'Crew flagged and isolated a loose handrail bolt before starting the walkway task.', signal_type: 'positive_performance', energy_type: 'gravitational', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v8' },
+  { id: 'OB-5763', when: '9d ago', occurredAt: '2025-04-28T07:50:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'Second tethering point on the north gantry showing wear, due for replacement.', signal_type: 'weak_signal', energy_type: 'gravitational', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v8' },
+  { id: 'OB-5762', when: '9d ago', occurredAt: '2025-04-28T08:10:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'Pre-start sheet for the crusher line missing a supervisor sign-off.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v8' },
+  { id: 'OB-5761', when: '9d ago', occurredAt: '2025-04-28T08:40:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'Fuel bay shade structure showing the same wear flagged last visit.', signal_type: 'weak_signal', energy_type: 'thermal', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v8' },
+  { id: 'OB-5760', when: '9d ago', occurredAt: '2025-04-28T09:00:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'Two open barriers from last visit still awaiting parts.', signal_type: 'weak_signal', energy_type: 'none', status: 'classified', cleared_for_sharing: true, sharing_scope: 'site', visitId: 'v8' },
+  { id: 'OB-5759', when: '9d ago', occurredAt: '2025-04-28T09:30:00', ...site('Coolinga Plant'), observerName: 'J. Liang', summary: 'Unsecured spanner found on the overhead gantry above the walkway.', signal_type: 'barrier_failure', energy_type: 'gravitational', status: 'enriched', cleared_for_sharing: true, sharing_scope: 'region', visitId: 'v8' },
 ];
 
 export function energyLabel(e: EnergyType): string {

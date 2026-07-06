@@ -8,20 +8,31 @@ export interface Community {
   icon: string;
 }
 
+export type PostKind = 'discussion' | 'poll' | 'briefing';
+
+export interface PollOption {
+  label: string;
+  votes: number;
+}
+
 export interface Post {
   id: string;
+  kind: PostKind;
   author: string;
   avatar?: string;
   generated?: boolean;
   community: string;
   when: string;
+  postedAgoMinutes: number;
   title: string;
   body: string;
   replies: number;
   likes: number;
   files?: number;
+  fileName?: string;
   role?: string;
   digest?: boolean;
+  pollOptions?: PollOption[];
 }
 
 export interface ThreadReply {
@@ -32,8 +43,7 @@ export interface ThreadReply {
   likes: number;
 }
 
-export interface Thread {
-  post: Post;
-  question: string;
+export interface ThreadExtra {
+  question?: string;
   replies: ThreadReply[];
 }

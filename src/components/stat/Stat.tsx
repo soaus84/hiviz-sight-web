@@ -10,12 +10,11 @@ export interface StatProps {
   deltaTone?: string;
   sub?: string;
   icon?: string;
-  accent?: boolean;
 }
 
-export function Stat({ label, value, unit, delta, deltaTone, sub, icon, accent }: StatProps) {
+export function Stat({ label, value, unit, delta, deltaTone, sub, icon }: StatProps) {
   return (
-    <Card pad={18} style={accent ? { background: colors.ink, borderColor: colors.ink } : undefined}>
+    <Card pad={18}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
         <span
           style={{
@@ -24,19 +23,19 @@ export function Stat({ label, value, unit, delta, deltaTone, sub, icon, accent }
             fontWeight: 700,
             letterSpacing: 0.8,
             textTransform: 'uppercase',
-            color: accent ? 'rgba(255,255,255,0.6)' : colors.inkMuted,
+            color: colors.inkMuted,
           }}
         >
           {label}
         </span>
-        {icon && <Icon name={icon} size={18} color={accent ? colors.hi : colors.inkMuted} />}
+        {icon && <Icon name={icon} size={18} color={colors.inkMuted} />}
       </div>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginTop: 14 }}>
-        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 34, fontWeight: 700, letterSpacing: -1, color: accent ? '#fff' : colors.ink, lineHeight: 1 }}>
+        <span style={{ fontFamily: 'var(--font-sans)', fontSize: 34, fontWeight: 700, letterSpacing: -1, color: colors.ink, lineHeight: 1 }}>
           {value}
         </span>
         {unit && (
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: accent ? 'rgba(255,255,255,0.6)' : colors.inkMuted }}>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600, color: colors.inkMuted }}>
             {unit}
           </span>
         )}
@@ -59,7 +58,7 @@ export function Stat({ label, value, unit, delta, deltaTone, sub, icon, accent }
         )}
       </div>
       {sub && (
-        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: accent ? 'rgba(255,255,255,0.7)' : colors.inkSoft, marginTop: 8, fontWeight: 500 }}>
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, marginTop: 8, fontWeight: 500 }}>
           {sub}
         </div>
       )}

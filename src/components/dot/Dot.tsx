@@ -1,10 +1,12 @@
+import { colors } from '@/tokens';
+
 export interface DotProps {
   tone?: string;
   size?: number;
   pulse?: boolean;
 }
 
-export function Dot({ tone = 'var(--color-ink-muted)', size = 8, pulse }: DotProps) {
+export function Dot({ tone = colors.inkMuted, size = 8, pulse }: DotProps) {
   return (
     <span
       style={{

@@ -14,6 +14,7 @@ export interface BtnProps {
   onClick?: MouseEventHandler<HTMLButtonElement>;
   full?: boolean;
   type?: 'button' | 'submit' | 'reset';
+  disabled?: boolean;
 }
 
 const VARIANT_STYLE: Record<BtnVariant, CSSProperties> = {
@@ -24,7 +25,7 @@ const VARIANT_STYLE: Record<BtnVariant, CSSProperties> = {
   danger: { background: 'transparent', color: colors.red, border: `1px solid ${colors.red}33` },
 };
 
-export function Btn({ children, variant = 'primary', size = 'md', icon, iconRight, onClick, full, type }: BtnProps) {
+export function Btn({ children, variant = 'primary', size = 'md', icon, iconRight, onClick, full, type, disabled }: BtnProps) {
   const pad = size === 'sm' ? '0 12px' : size === 'lg' ? '0 20px' : '0 15px';
   const h = size === 'sm' ? 32 : size === 'lg' ? 46 : 38;
   const fs = size === 'sm' ? 12.5 : 13.5;
@@ -32,7 +33,8 @@ export function Btn({ children, variant = 'primary', size = 'md', icon, iconRigh
     <button
       className={`a-btn a-btn-${variant}`}
       type={type || 'button'}
-      onClick={onClick}
+      onClick={disabled ? undefined : onClick}
+      disabled={disabled}
       style={{
         fontFamily: 'var(--font-sans)',
         height: h,
@@ -43,8 +45,9 @@ export function Btn({ children, variant = 'primary', size = 'md', icon, iconRigh
         display: 'inline-flex',
         alignItems: 'center',
         justifyContent: 'center',
+        opacity: disabled ? 0.45 : 1,
+        cursor: disabled ? 'not-allowed' : 'pointer',
         gap: 7,
-        cursor: 'pointer',
         whiteSpace: 'nowrap',
         width: full ? '100%' : 'auto',
         ...VARIANT_STYLE[variant],

@@ -1,24 +1,4 @@
 :root {
-  --color-bg: #FAFAF7;
-  --color-panel: #FFFFFF;
-  --color-ink: #0A0A0A;
-  --color-ink-soft: #525252;
-  --color-ink-muted: #A3A3A3;
-  --color-rule: #E5E5E2;
-  --color-rule-soft: #F1F0EC;
-  --color-fill: #F7F6F2;
-  --color-hi: #FFFC36;
-  --color-hi-ink: #1A1F00;
-  --color-red: #E63946;
-  --color-amber: #D97706;
-  --color-green: #22875A;
-  --color-blue: #1E40AF;
-  --color-side: #0C0C0C;
-  --color-side-panel: #161615;
-  --color-side-text: #EDEDEA;
-  --color-side-muted: #85847E;
-  --color-side-rule: rgba(255,255,255,0.08);
-
   --font-sans: "GT Walsheim", "Hanken Grotesk", system-ui, -apple-system, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, monospace;
 

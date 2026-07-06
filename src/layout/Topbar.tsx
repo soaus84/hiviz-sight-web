@@ -1,10 +1,10 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { Icon, IconBtn, Search, Avatar } from '@/components';
-import { CURRENT_USER } from '@/data/currentUser';
+import { IconBtn, Search } from '@/components';
 import { NOTIF_UNREAD } from '@/data/notifications';
 import { NotifMenu } from './NotifMenu';
+import { PurviewSwitcher } from './PurviewSwitcher';
+import { UserSwitcher } from './UserSwitcher';
 import type { Breakpoint } from '@/hooks/useBreakpoint';
 
 export interface TopbarProps {
@@ -13,7 +13,6 @@ export interface TopbarProps {
 }
 
 export function Topbar({ breakpoint, onMenuClick }: TopbarProps) {
-  const navigate = useNavigate();
   const [notifOpen, setNotifOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
   const isMobile = breakpoint === 'mobile';
@@ -45,13 +44,7 @@ export function Topbar({ breakpoint, onMenuClick }: TopbarProps) {
         </>
       ) : (
         <>
-          {!isMobile && (
-            <button className="a-ws" style={{ display: 'flex', alignItems: 'center', gap: 9, background: 'transparent', border: 'none', cursor: 'pointer', padding: '6px 8px', borderRadius: 'var(--radius-md)' }}>
-              <Icon name="public" size={18} color={colors.inkSoft} />
-              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700, color: colors.ink }}>Pilbara region</span>
-              <Icon name="expand_more" size={18} color={colors.inkMuted} />
-            </button>
-          )}
+          {!isMobile && <PurviewSwitcher />}
           <div style={{ flex: 1 }} />
           {isMobile ? (
             <IconBtn name="search" onClick={() => setMobileSearchOpen(true)} />
@@ -67,9 +60,7 @@ export function Topbar({ breakpoint, onMenuClick }: TopbarProps) {
               </>
             )}
           </div>
-          <button onClick={() => navigate('/settings')} style={{ background: 'transparent', border: 'none', cursor: 'pointer', padding: 0 }}>
-            <Avatar name={CURRENT_USER.name} size={38} tone={colors.hi} />
-          </button>
+          <UserSwitcher />
         </>
       )}
     </div>
