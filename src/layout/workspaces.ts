@@ -31,6 +31,7 @@ export const WORKSPACES: Workspace[] = [
       { path: '/insights', label: 'Insights', icon: 'lightbulb' },
       { path: '/visits', label: 'Visits', icon: 'calendar_today' },
       { path: '/observations', label: 'Observations', icon: 'visibility' },
+      { path: '/leaders', label: 'Leaders', icon: 'leaderboard' },
       { path: '/sites', label: 'Sites', icon: 'location_on' },
     ],
   },

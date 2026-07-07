@@ -6,6 +6,13 @@ export interface User {
   name: string;
   role: string;
   region: string;
+  /** Home division, when this person's role is division-pinned (e.g. a site
+   * supervisor tied to one site's division). Undefined for region-wide roles
+   * (Region Manager, HSE Lead) — a division is more often an individual's
+   * purview than an organisational constant, so "no pin" is the common case,
+   * not a gap. An unpinned member matches any division filter within their
+   * region — see memberInPurview in data/leaders.ts. */
+  division?: string;
   access: AccessLevel;
   sitesCount: number;
   lastActive: string;

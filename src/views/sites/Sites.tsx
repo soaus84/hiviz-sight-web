@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
-import { PageHead, Btn, Pills, Search, DataTable, Badge, Dot, Icon, type Column } from '@/components';
+import { PageHead, Btn, Pills, Search, DataTable, Badge, Icon, type Column } from '@/components';
 import { SITES } from '@/data/sites';
 import { inPurview, purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
@@ -25,12 +25,9 @@ export function Sites() {
 
   const cols: Column<Site>[] = [
     { key: 'name', label: 'Site', render: (r) => (
-      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-        {r.live && <Dot tone={colors.green} size={8} pulse />}
-        <div>
-          <div style={{ fontWeight: 700, fontSize: 14 }}>{r.name}</div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: colors.inkSoft, marginTop: 1 }}>{r.region} · {r.division} · {r.type}</div>
-        </div>
+      <div>
+        <div style={{ fontWeight: 700, fontSize: 14 }}>{r.name}</div>
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: colors.inkSoft, marginTop: 1 }}>{r.region} · {r.division} · {r.type}</div>
       </div>
     ) },
     { key: 'visibility', label: 'Visibility', w: 150, render: (r) => <Badge tone={VIZ_TONE[r.visibility]}>{VIZ_LABEL[r.visibility]}</Badge> },

@@ -12,6 +12,7 @@ import { SiteContacts } from '@/views/sites/SiteContacts';
 import { SiteInsights } from '@/views/sites/SiteInsights';
 import { Observations } from '@/views/observations/Observations';
 import { Insights } from '@/views/insights/Insights';
+import { Leaders } from '@/views/leaders/Leaders';
 import { Feed } from '@/views/communities/Feed';
 import { MyCommunities } from '@/views/communities/MyCommunities';
 import { CommunityDetail } from '@/views/communities/CommunityDetail';
@@ -41,6 +42,7 @@ export const routes = [
       { path: 'observations', element: <Observations /> },
       { path: 'insights', element: <Insights /> },
       { path: 'insights/:id', element: <Insights /> },
+      { path: 'leaders', element: <Leaders /> },
       { path: 'communities', element: <Feed /> },
       { path: 'communities/mine', element: <MyCommunities /> },
       { path: 'communities/thread/:id', element: <CommunityThreadPage /> },

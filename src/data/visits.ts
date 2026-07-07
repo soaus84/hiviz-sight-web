@@ -8,8 +8,8 @@ export const VISITS: Visit[] = [
   { id: 'v4', siteName: 'Brookman Pit 2', region: 'Pilbara', division: 'Iron Ore', visitor: 'Jordan Marsh', when: 'Wed 14 May · 06:30', date: '2025-05-14', state: 'upcoming', briefing: 'pending', observationCount: 0 },
   { id: 'v5', siteName: 'Northgate Open Cut', region: 'Pilbara', division: 'Iron Ore', visitor: 'Jordan Marsh', when: 'Mon 5 May', date: '2025-05-05', state: 'past', observationCount: 6, signals: { pos: 2, weak: 3, barrier: 1 }, ledToInsight: true },
   { id: 'v6', siteName: 'Ridgeback Processing', region: 'Pilbara', division: 'Iron Ore', visitor: 'Jordan Marsh', when: 'Thu 1 May', date: '2025-05-01', state: 'past', observationCount: 4, signals: { pos: 1, weak: 2, barrier: 1 } },
-  { id: 'v7', siteName: 'Marlow Stockyard', region: 'Pilbara', division: 'Gold', visitor: 'P. Singh', when: 'Tue 29 Apr', date: '2025-04-29', state: 'past', observationCount: 5, signals: { pos: 3, weak: 2, barrier: 0 } },
-  { id: 'v8', siteName: 'Coolinga Plant', region: 'Goldfields', division: 'Gold', visitor: 'J. Liang', when: 'Mon 28 Apr', date: '2025-04-28', state: 'past', observationCount: 7, signals: { pos: 2, weak: 4, barrier: 1 } },
+  { id: 'v7', siteName: 'Marlow Stockyard', region: 'Pilbara', division: 'Gold', visitor: 'Priya Singh', when: 'Tue 29 Apr', date: '2025-04-29', state: 'past', observationCount: 5, signals: { pos: 3, weak: 2, barrier: 0 } },
+  { id: 'v8', siteName: 'Coolinga Plant', region: 'Goldfields', division: 'Gold', visitor: 'Jess Liang', when: 'Mon 28 Apr', date: '2025-04-28', state: 'past', observationCount: 7, signals: { pos: 2, weak: 4, barrier: 1 } },
 ];
 
 export function createVisit(input: {
