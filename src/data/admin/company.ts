@@ -29,20 +29,28 @@ export const ADMIN_REGIONS: TagRecord[] = [
   { id: 'reg4', name: 'Mid West', description: 'No active worksites yet.' },
 ];
 
+// A second level under Division — "business unit" is the other name this
+// goes by. Every record requires a parentId (see TagList's `parent` prop).
+export const ADMIN_SUBDIVISIONS: TagRecord[] = [
+  { id: 'sub1', name: 'Crushing & Screening', description: 'Primary and secondary crushing circuits.', parentId: 'div1' },
+  { id: 'sub2', name: 'Rail & Port', description: 'Rail haulage and port loadout.', parentId: 'div1' },
+  { id: 'sub3', name: 'Open Pit', description: 'Open pit mining operations.', parentId: 'div2' },
+];
+
 function makeId(prefix: string, list: TagRecord[]): string {
   return `${prefix}${list.length + 1}-${Date.now()}`;
 }
 
-export function addTag(list: TagRecord[], idPrefix: string, name: string, description?: string): TagRecord {
-  const record: TagRecord = { id: makeId(idPrefix, list), name, description: description || undefined };
+export function addTag(list: TagRecord[], idPrefix: string, name: string, description?: string, parentId?: string): TagRecord {
+  const record: TagRecord = { id: makeId(idPrefix, list), name, description: description || undefined, parentId };
   list.push(record);
   return record;
 }
 
-export function updateTag(list: TagRecord[], id: string, name: string, description?: string): TagRecord | null {
+export function updateTag(list: TagRecord[], id: string, name: string, description?: string, parentId?: string): TagRecord | null {
   const idx = list.findIndex((t) => t.id === id);
   if (idx === -1) return null;
-  list[idx] = { ...list[idx], name, description: description || undefined };
+  list[idx] = { ...list[idx], name, description: description || undefined, parentId };
   return list[idx];
 }
 

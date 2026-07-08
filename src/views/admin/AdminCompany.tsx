@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Tabs, Card, Btn } from '@/components';
-import { COMPANY_DETAILS, updateCompanyDetails, ADMIN_DIVISIONS, ADMIN_REGIONS, addTag, updateTag, removeTag } from '@/data/admin/company';
-import { TagList } from './TagList';
+import { PageHead, Tabs, Card, Btn, DataTable, Drawer, IconBtn, Icon, type Column } from '@/components';
+import { COMPANY_DETAILS, updateCompanyDetails } from '@/data/admin/company';
+import { TERMINOLOGY_TERMS, updateTerminologyLabel, clearTerminologyLabel } from '@/data/admin/terminology';
+import type { TerminologyTerm } from '@/types';
 
-type CompanyTab = 'details' | 'divisions' | 'regions';
-const VALID_TABS: CompanyTab[] = ['details', 'divisions', 'regions'];
+type CompanyTab = 'details' | 'terminology';
+const VALID_TABS: CompanyTab[] = ['details', 'terminology'];
 
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' as const, color: colors.inkMuted, marginBottom: 5 };
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13.5, outline: 'none' };
@@ -35,42 +36,79 @@ function DetailsForm() {
   );
 }
 
+/** Fixed set of app-wide terms Admin can rename — see TerminologyTerm's doc
+ * comment. No add/delete, only editing customLabel, so this doesn't reuse
+ * TagList's add-a-new-record pattern. */
+function TerminologyList() {
+  const [, bump] = useState(0);
+  const refresh = () => bump((n) => n + 1);
+  const [editing, setEditing] = useState<TerminologyTerm | null>(null);
+  const [customLabel, setCustomLabel] = useState('');
+
+  const openEdit = (t: TerminologyTerm) => { setEditing(t); setCustomLabel(t.customLabel ?? ''); };
+  const close = () => setEditing(null);
+  const save = () => {
+    if (!editing) return;
+    updateTerminologyLabel(editing.id, customLabel);
+    refresh();
+    close();
+  };
+  const revert = () => {
+    if (!editing) return;
+    clearTerminologyLabel(editing.id);
+    refresh();
+    close();
+  };
+
+  const cols: Column<TerminologyTerm>[] = [
+    { key: 'defaultLabel', label: 'Term', render: (r) => <span style={{ fontWeight: 700, fontSize: 13.5 }}>{r.defaultLabel}</span> },
+    { key: 'customLabel', label: 'Custom label', render: (r) => <span style={{ color: r.customLabel ? colors.ink : colors.inkMuted, fontStyle: r.customLabel ? 'normal' : 'italic' }}>{r.customLabel || '— default —'}</span> },
+    { key: 'go', label: '', w: 44, align: 'right', render: () => <Icon name="chevron_right" size={18} color={colors.inkMuted} /> },
+  ];
+
+  return (
+    <div>
+      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, marginBottom: 14, maxWidth: 640 }}>
+        Override the terms used across the app. These aren't wired into live labels yet — stored here for when they are.
+      </div>
+      <DataTable columns={cols} rows={TERMINOLOGY_TERMS} rowKey="id" onRow={openEdit} empty="No terms yet." />
+
+      <Drawer open={!!editing} onClose={close}>
+        {editing && (
+          <>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '18px 22px', borderBottom: `1px solid ${colors.rule}` }}>
+              <div style={{ flex: 1, minWidth: 0, fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 700 }}>{editing.defaultLabel}</div>
+              <IconBtn name="close" onClick={close} />
+            </div>
+            <div className="a-scroll" style={{ flex: 1, overflowY: 'auto', padding: 22 }}>
+              <label style={fieldLabel}>Custom label</label>
+              <input className="a-input" value={customLabel} onChange={(e) => setCustomLabel(e.target.value)} placeholder={editing.defaultLabel} style={{ ...inputStyle, marginBottom: 16 }} autoFocus />
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                {editing.customLabel && <Btn variant="ghost" icon="restart_alt" onClick={revert}>Revert to default</Btn>}
+                <div style={{ flex: 1 }} />
+                <Btn variant="primary" icon="check" onClick={save}>Save</Btn>
+              </div>
+            </div>
+          </>
+        )}
+      </Drawer>
+    </div>
+  );
+}
+
 export function AdminCompany() {
   const [params, setParams] = useSearchParams();
   const tabParam = params.get('tab');
   const tab = (VALID_TABS as string[]).includes(tabParam || '') ? (tabParam as CompanyTab) : 'details';
   const setTab = (k: string) => setParams(k === 'details' ? {} : { tab: k });
 
-  // Force a re-render after a TagList mutation — ADMIN_DIVISIONS/REGIONS are
-  // plain mutable arrays, not React state (same reasoning as INSIGHTS
-  // elsewhere in this app).
-  const [, bump] = useState(0);
-  const refresh = () => bump((n) => n + 1);
-
   return (
     <div>
-      <PageHead title="Company" sub="Company details, divisions and regions." />
-      <Tabs value={tab} onChange={setTab} items={[{ k: 'details', label: 'Details' }, { k: 'divisions', label: 'Divisions', n: ADMIN_DIVISIONS.length }, { k: 'regions', label: 'Regions', n: ADMIN_REGIONS.length }]} />
+      <PageHead title="Company" sub="Company details and terminology." />
+      <Tabs value={tab} onChange={setTab} items={[{ k: 'details', label: 'Details' }, { k: 'terminology', label: 'Terminology', n: TERMINOLOGY_TERMS.length }]} />
       <div style={{ marginTop: 20 }}>
         {tab === 'details' && <DetailsForm />}
-        {tab === 'divisions' && (
-          <TagList
-            noun="division"
-            items={ADMIN_DIVISIONS}
-            onAdd={(name, description) => { addTag(ADMIN_DIVISIONS, 'div', name, description); refresh(); }}
-            onUpdate={(id, name, description) => { updateTag(ADMIN_DIVISIONS, id, name, description); refresh(); }}
-            onDelete={(id) => { removeTag(ADMIN_DIVISIONS, id); refresh(); }}
-          />
-        )}
-        {tab === 'regions' && (
-          <TagList
-            noun="region"
-            items={ADMIN_REGIONS}
-            onAdd={(name, description) => { addTag(ADMIN_REGIONS, 'reg', name, description); refresh(); }}
-            onUpdate={(id, name, description) => { updateTag(ADMIN_REGIONS, id, name, description); refresh(); }}
-            onDelete={(id) => { removeTag(ADMIN_REGIONS, id); refresh(); }}
-          />
-        )}
+        {tab === 'terminology' && <TerminologyList />}
       </div>
     </div>
   );

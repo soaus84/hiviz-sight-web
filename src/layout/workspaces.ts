@@ -58,6 +58,7 @@ export const WORKSPACES: Workspace[] = [
     adminOnly: true,
     nav: [
       { path: '/admin/company', label: 'Company', icon: 'apartment' },
+      { path: '/admin/structure', label: 'Structure', icon: 'account_tree' },
       { path: '/admin/users', label: 'Users', icon: 'group' },
       { path: '/admin/taxonomies', label: 'Taxonomies', icon: 'sell' },
       { path: '/admin/worksites', label: 'Worksites', icon: 'domain' },

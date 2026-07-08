@@ -7,6 +7,23 @@ export interface TagRecord {
   id: string;
   name: string;
   description?: string;
+  /** Id of this record's parent in another TagRecord list — e.g. a
+   * Subdivision's parent Division. Only set for lists rendered with
+   * TagList's `parent` prop. */
+  parentId?: string;
+}
+
+/** An app-wide vocabulary term (e.g. "Division", "Subdivision") that Admin
+ * can rename. The set of terms is fixed — this isn't a free-form tag list,
+ * so there's no add/delete, only editing customLabel. Mock only for now:
+ * nothing outside Admin reads customLabel yet, this just stores the
+ * override for when that wiring happens. */
+export interface TerminologyTerm {
+  id: string;
+  /** Stable key a future label lookup would key off — not shown in the UI. */
+  key: string;
+  defaultLabel: string;
+  customLabel?: string;
 }
 
 export interface CompanyDetails {

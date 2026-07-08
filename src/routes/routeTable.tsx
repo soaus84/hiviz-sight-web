@@ -19,6 +19,7 @@ import { CommunityDetail } from '@/views/communities/CommunityDetail';
 import { CommunityThreadPage } from '@/views/communities/CommunityThreadPage';
 import { Settings } from '@/views/settings/Settings';
 import { AdminCompany } from '@/views/admin/AdminCompany';
+import { AdminStructure } from '@/views/admin/AdminStructure';
 import { AdminUsers } from '@/views/admin/AdminUsers';
 import { AdminTaxonomies } from '@/views/admin/AdminTaxonomies';
 import { AdminWorksites } from '@/views/admin/AdminWorksites';
@@ -54,6 +55,7 @@ export const routes = [
       { path: 'communities/:id', element: <CommunityDetail /> },
       { path: 'settings', element: <Settings /> },
       { path: 'admin/company', element: <AdminCompany /> },
+      { path: 'admin/structure', element: <AdminStructure /> },
       { path: 'admin/users', element: <AdminUsers /> },
       { path: 'admin/taxonomies', element: <AdminTaxonomies /> },
       { path: 'admin/worksites', element: <AdminWorksites /> },
