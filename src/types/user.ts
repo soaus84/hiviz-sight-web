@@ -1,5 +1,5 @@
 export type AccessLevel = 'Admin' | 'Manager' | 'Supervisor' | 'Observer';
-export type UserStatus = 'active' | 'invited';
+export type UserStatus = 'active' | 'invited' | 'revoked';
 
 export interface User {
   id: string;

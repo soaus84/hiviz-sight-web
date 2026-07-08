@@ -95,6 +95,10 @@ export function memberInPurview(member: User, purview: PurviewFilter): boolean {
   return divisionMatchesScope(member.division, purview.division);
 }
 
+/** Excludes revoked members — someone who's lost access shouldn't read as a
+ * current contributor. Invited members still show (matches the existing
+ * "unassigned" filtering elsewhere — being invited isn't a reason to hide
+ * someone), only revoked is a real exclusion. */
 export function membersInPurview(purview: PurviewFilter): User[] {
-  return USERS.filter((u) => memberInPurview(u, purview));
+  return USERS.filter((u) => u.status !== 'revoked' && memberInPurview(u, purview));
 }

@@ -1,10 +1,11 @@
 import { useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
-import { Search, Btn, Badge, DataTable, Avatar, Drawer, Icon, IconBtn, type Column } from '@/components';
-import { USERS, addUser, updateUser, removeUser, type UserInput } from '@/data/users';
+import { PageHead, Search, Tabs, Btn, Badge, DataTable, Avatar, Drawer, Icon, IconBtn, type Column } from '@/components';
+import { USERS, addUser, updateUser, revokeUser, reinstateUser, type UserInput } from '@/data/users';
 import { ADMIN_REGIONS, ADMIN_DIVISIONS } from '@/data/admin/company';
 import { SearchSelect } from './SearchSelect';
-import type { AccessLevel, User } from '@/types';
+import type { AccessLevel, User, UserStatus } from '@/types';
 
 const ACCESS_TONE: Record<AccessLevel, Tone> = { Admin: 'primary', Manager: 'info', Supervisor: 'success', Observer: 'primary' };
 const ACCESS_OUTLINE: Record<AccessLevel, boolean> = { Admin: false, Manager: false, Supervisor: false, Observer: true };
@@ -16,12 +17,22 @@ const ROLES = ['Safety Manager', 'Business Manager'] as const;
 const REGION_OPTIONS = ADMIN_REGIONS.map((r) => ({ value: r.name, label: r.name }));
 const DIVISION_OPTIONS = ADMIN_DIVISIONS.map((d) => ({ value: d.name, label: d.name }));
 
+const VALID_TABS: UserStatus[] = ['active', 'invited', 'revoked'];
+function isUserStatus(v: string | null): v is UserStatus {
+  return !!v && (VALID_TABS as string[]).includes(v);
+}
+
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' as const, color: colors.inkMuted, marginBottom: 5 };
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13.5, outline: 'none', background: colors.panel };
 
 const EMPTY_INPUT: UserInput = { name: '', role: ROLES[0], region: '', division: '', access: 'Observer' };
 
 export function AdminUsers() {
+  const [params, setParams] = useSearchParams();
+  const tabParam = params.get('tab');
+  const tab = isUserStatus(tabParam) ? tabParam : 'active';
+  const setTab = (k: string) => setParams(k === 'active' ? {} : { tab: k });
+
   const [query, setQuery] = useState('');
   const [, bump] = useState(0);
   const refresh = () => bump((n) => n + 1);
@@ -42,13 +53,23 @@ export function AdminUsers() {
     refresh();
     close();
   };
-  const remove = () => {
-    if (editing && editing !== 'new') removeUser(editing.id);
+  const revoke = () => {
+    if (editing && editing !== 'new') revokeUser(editing.id);
+    refresh();
+    close();
+  };
+  const reinstate = () => {
+    if (editing && editing !== 'new') reinstateUser(editing.id);
     refresh();
     close();
   };
 
-  const rows = USERS.filter((u) => !query || u.name.toLowerCase().includes(query.toLowerCase()));
+  const counts = {
+    active: USERS.filter((u) => u.status === 'active').length,
+    invited: USERS.filter((u) => u.status === 'invited').length,
+    revoked: USERS.filter((u) => u.status === 'revoked').length,
+  };
+  const rows = USERS.filter((u) => u.status === tab && (!query || u.name.toLowerCase().includes(query.toLowerCase())));
 
   const cols: Column<User>[] = [
     { key: 'name', label: 'Name', render: (r) => (
@@ -61,15 +82,15 @@ export function AdminUsers() {
     { key: 'access', label: 'Access', w: 130, render: (r) => <Badge tone={ACCESS_TONE[r.access]} outline={ACCESS_OUTLINE[r.access]}>{r.access}</Badge> },
     { key: 'sitesCount', label: 'Sites', w: 80, mono: true, render: (r) => <span style={{ fontWeight: 700 }}>{r.sitesCount}</span> },
     { key: 'lastActive', label: 'Last active', w: 130, render: (r) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: r.lastActive === 'Online now' ? colors.green : colors.inkSoft, fontWeight: 600 }}>{r.lastActive}</span> },
-    { key: 'status', label: '', w: 110, render: (r) => r.status === 'invited' ? <Badge tone="warning" outline>Invited</Badge> : null },
     { key: 'go', label: '', w: 44, align: 'right', render: () => <Icon name="chevron_right" size={18} color={colors.inkMuted} /> },
   ];
 
   return (
     <div>
+      <PageHead title="Users" sub="Everyone with — or invited to have — access to this instance." actions={<Btn variant="accent" icon="person_add" onClick={openNew}>Invite user</Btn>} />
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 14, gap: 12, flexWrap: 'wrap' }}>
+        <Tabs value={tab} onChange={setTab} items={[{ k: 'active', label: 'Active', n: counts.active }, { k: 'invited', label: 'Invited', n: counts.invited }, { k: 'revoked', label: 'Revoked', n: counts.revoked }]} />
         <Search placeholder="Search people" width={260} value={query} onChange={setQuery} />
-        <Btn variant="accent" icon="person_add" onClick={openNew}>Invite user</Btn>
       </div>
       <DataTable columns={cols} rows={rows} rowKey="id" onRow={openEdit} empty="No people match this search." />
 
@@ -107,9 +128,10 @@ export function AdminUsers() {
               </div>
 
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                {editing !== 'new' && <Btn variant="danger" icon="delete" onClick={remove}>Remove</Btn>}
+                {editing !== 'new' && editing.status === 'revoked' && <Btn variant="ghost" icon="restart_alt" onClick={reinstate}>Reinstate</Btn>}
+                {editing !== 'new' && editing.status !== 'revoked' && <Btn variant="danger" icon="block" onClick={revoke}>Revoke access</Btn>}
                 <div style={{ flex: 1 }} />
-                <Btn variant="primary" icon="check" disabled={!input.name.trim() || !input.region.trim()} onClick={save}>Save</Btn>
+                <Btn variant="primary" icon="check" disabled={!input.name.trim() || !input.region.trim()} onClick={save}>{editing === 'new' ? 'Invite' : 'Save'}</Btn>
               </div>
             </div>
           </>

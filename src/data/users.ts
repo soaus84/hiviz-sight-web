@@ -10,6 +10,7 @@ export const USERS: User[] = [
   { id: 'u4', name: 'Kim Lee', role: 'Business Manager', region: 'Kalgoorlie', division: 'Gold', access: 'Observer', sitesCount: 1, lastActive: '3h ago', status: 'active' },
   { id: 'u5', name: 'Jess Liang', role: 'Safety Manager', region: 'Goldfields', division: 'Gold', access: 'Manager', sitesCount: 3, lastActive: 'Yesterday', status: 'active' },
   { id: 'u6', name: 'Marcus Okafor', role: 'Safety Manager', region: 'Pilbara', division: 'Gold', access: 'Supervisor', sitesCount: 1, lastActive: '2 days ago', status: 'invited' },
+  { id: 'u7', name: 'D. Whitlock', role: 'Safety Manager', region: 'Goldfields', division: 'Gold', access: 'Observer', sitesCount: 0, lastActive: '3mo ago', status: 'revoked' },
 ];
 
 export interface UserInput {
@@ -33,7 +34,19 @@ export function updateUser(id: string, input: UserInput): User | null {
   return USERS[idx];
 }
 
-export function removeUser(id: string): void {
+/** Revokes access without deleting the record — so there's a real answer to
+ * "who used to have access" (Revoked tab in AdminUsers), rather than the
+ * person just disappearing. */
+export function revokeUser(id: string): User | null {
   const idx = USERS.findIndex((u) => u.id === id);
-  if (idx !== -1) USERS.splice(idx, 1);
+  if (idx === -1) return null;
+  USERS[idx] = { ...USERS[idx], status: 'revoked' };
+  return USERS[idx];
+}
+
+export function reinstateUser(id: string): User | null {
+  const idx = USERS.findIndex((u) => u.id === id);
+  if (idx === -1) return null;
+  USERS[idx] = { ...USERS[idx], status: 'active' };
+  return USERS[idx];
 }

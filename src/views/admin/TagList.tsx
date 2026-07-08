@@ -70,7 +70,7 @@ export function TagList({ noun, items, onAdd, onUpdate, onDelete }: TagListProps
               <div style={{ display: 'flex', gap: 8, marginTop: 24 }}>
                 {editing !== 'new' && <Btn variant="danger" icon="delete" onClick={remove}>Delete</Btn>}
                 <div style={{ flex: 1 }} />
-                <Btn variant="primary" icon="check" disabled={!name.trim()} onClick={save}>Save</Btn>
+                <Btn variant="primary" icon="check" disabled={!name.trim()} onClick={save}>{editing === 'new' ? 'Create' : 'Save'}</Btn>
               </div>
             </div>
           </>
