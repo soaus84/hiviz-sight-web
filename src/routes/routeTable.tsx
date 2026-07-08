@@ -18,6 +18,11 @@ import { MyCommunities } from '@/views/communities/MyCommunities';
 import { CommunityDetail } from '@/views/communities/CommunityDetail';
 import { CommunityThreadPage } from '@/views/communities/CommunityThreadPage';
 import { Settings } from '@/views/settings/Settings';
+import { AdminCompany } from '@/views/admin/AdminCompany';
+import { AdminUsers } from '@/views/admin/AdminUsers';
+import { AdminTaxonomies } from '@/views/admin/AdminTaxonomies';
+import { AdminWorksites } from '@/views/admin/AdminWorksites';
+import { AdminApiTokens } from '@/views/admin/AdminApiTokens';
 import { NotFound } from '@/views/NotFound';
 
 // Extracted so it can also be fed to createMemoryRouter for Storybook page
@@ -48,6 +53,11 @@ export const routes = [
       { path: 'communities/thread/:id', element: <CommunityThreadPage /> },
       { path: 'communities/:id', element: <CommunityDetail /> },
       { path: 'settings', element: <Settings /> },
+      { path: 'admin/company', element: <AdminCompany /> },
+      { path: 'admin/users', element: <AdminUsers /> },
+      { path: 'admin/taxonomies', element: <AdminTaxonomies /> },
+      { path: 'admin/worksites', element: <AdminWorksites /> },
+      { path: 'admin/api-tokens', element: <AdminApiTokens /> },
       { path: '*', element: <NotFound /> },
     ],
   },

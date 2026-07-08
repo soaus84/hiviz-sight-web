@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { Icon } from '@/components';
+import { useActiveUser } from '@/state/ActiveUser';
 import { WORKSPACES, type Workspace } from './workspaces';
 
 export interface WorkspaceSwitcherProps {
@@ -13,6 +14,8 @@ export interface WorkspaceSwitcherProps {
 export function WorkspaceSwitcher({ active, collapsed, onNavigate }: WorkspaceSwitcherProps) {
   const [open, setOpen] = useState(false);
   const navigate = useNavigate();
+  const { user } = useActiveUser();
+  const visibleWorkspaces = WORKSPACES.filter((w) => !w.adminOnly || user.isAdmin);
 
   const select = (w: Workspace) => {
     setOpen(false);
@@ -71,7 +74,7 @@ export function WorkspaceSwitcher({ active, collapsed, onNavigate }: WorkspaceSw
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.inkMuted, padding: '10px 14px 6px' }}>
               Switch workspace
             </div>
-            {WORKSPACES.map((w) => {
+            {visibleWorkspaces.map((w) => {
               const on = w.id === active.id;
               return (
                 <button

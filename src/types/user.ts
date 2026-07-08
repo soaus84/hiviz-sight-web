@@ -28,4 +28,9 @@ export interface CurrentUser {
   /** Home division purview. Undefined means no division pin — most regional managers don't have one. */
   division?: string;
   email: string;
+  /** Additive — grants access to the Admin workspace on top of whatever
+   * region/division purview this person already has. Not the same axis as
+   * AccessLevel on User (that's per-org-member permissions in Users &
+   * access); this is specifically "can this preview persona see Admin". */
+  isAdmin?: boolean;
 }

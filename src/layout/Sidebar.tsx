@@ -62,7 +62,7 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
       </div>
 
       {drilldown ? (
-        <DrilldownHeader icon={drilldown.icon} title={drilldown.title} collapsed={collapsed} />
+        <DrilldownHeader icon={drilldown.icon} title={drilldown.title} backPath={drilldown.backPath} collapsed={collapsed} />
       ) : (
         <WorkspaceSwitcher active={workspace} collapsed={collapsed} onNavigate={onNavigate} />
       )}

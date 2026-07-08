@@ -5,17 +5,18 @@ import { Icon } from '@/components';
 export interface DrilldownHeaderProps {
   icon: string;
   title: string;
+  backPath: string;
   collapsed?: boolean;
 }
 
-export function DrilldownHeader({ icon, title, collapsed }: DrilldownHeaderProps) {
+export function DrilldownHeader({ icon, title, backPath, collapsed }: DrilldownHeaderProps) {
   const navigate = useNavigate();
 
   return (
     <div style={{ padding: collapsed ? '0 8px 14px' : '0 12px 14px' }}>
       <button
         className="a-nav"
-        onClick={() => navigate(-1)}
+        onClick={() => navigate(backPath)}
         title={collapsed ? 'Back' : undefined}
         style={{
           width: '100%',

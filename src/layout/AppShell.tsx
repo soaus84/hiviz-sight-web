@@ -20,9 +20,12 @@ export function AppShell() {
   // breakpoint/view made .a-scroll's bottom padding get overlapped by
   // overflowing content instead of appearing after it — so this mirrors
   // Insights.tsx's own fitToHeight condition exactly (shared helper so the
-  // two can't drift apart again).
+  // two can't drift apart again). Matches both the global /insights page and
+  // the site-scoped /sites/:id/insights sub-page — same view pattern, same
+  // layout treatment.
+  const isInsightsRoute = location.pathname.startsWith('/insights') || location.pathname.endsWith('/insights');
   const insightsView: InsightsView = new URLSearchParams(location.search).get('view') === 'board' ? 'board' : 'list';
-  const fitToHeight = location.pathname.startsWith('/insights') && insightsFitToHeight(insightsView, breakpoint);
+  const fitToHeight = isInsightsRoute && insightsFitToHeight(insightsView, breakpoint);
 
   return (
     <ActiveUserProvider>

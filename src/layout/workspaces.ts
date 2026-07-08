@@ -8,7 +8,7 @@ export interface NavItem {
   badge?: () => number | undefined;
 }
 
-export type WorkspaceId = 'insights' | 'communities';
+export type WorkspaceId = 'insights' | 'communities' | 'admin';
 
 export interface Workspace {
   id: WorkspaceId;
@@ -17,6 +17,9 @@ export interface Workspace {
   description: string;
   home: string;
   nav: NavItem[];
+  /** Only offered in the workspace switcher when the active preview
+   * persona has CurrentUser.isAdmin — see WorkspaceSwitcher. */
+  adminOnly?: boolean;
 }
 
 export const WORKSPACES: Workspace[] = [
@@ -31,7 +34,7 @@ export const WORKSPACES: Workspace[] = [
       { path: '/insights', label: 'Insights', icon: 'lightbulb' },
       { path: '/visits', label: 'Visits', icon: 'calendar_today' },
       { path: '/observations', label: 'Observations', icon: 'visibility' },
-      { path: '/leaders', label: 'Leaders', icon: 'leaderboard' },
+      { path: '/leaders', label: 'Leaders', icon: 'shield_person' },
       { path: '/sites', label: 'Sites', icon: 'location_on' },
     ],
   },
@@ -46,11 +49,30 @@ export const WORKSPACES: Workspace[] = [
       { path: '/communities/mine', label: 'My Communities', icon: 'groups' },
     ],
   },
+  {
+    id: 'admin',
+    label: 'Admin',
+    icon: 'admin_panel_settings',
+    description: 'Company, users, taxonomies & worksites',
+    home: '/admin/company',
+    adminOnly: true,
+    nav: [
+      { path: '/admin/company', label: 'Company', icon: 'apartment' },
+      { path: '/admin/users', label: 'Users', icon: 'group' },
+      { path: '/admin/taxonomies', label: 'Taxonomies', icon: 'sell' },
+      { path: '/admin/worksites', label: 'Worksites', icon: 'domain' },
+      { path: '/admin/api-tokens', label: 'API Tokens', icon: 'key' },
+    ],
+  },
 ];
 
+/** Matches by top path segment rather than a full nav-path equality check —
+ * Insights/Communities nav items sit one segment deep ('/sites',
+ * '/communities') but Admin's sit two deep ('/admin/company'), so comparing
+ * whole paths would never match Admin at all. */
 export function workspaceForPath(pathname: string): Workspace {
-  const section = '/' + pathname.split('/')[1];
-  return WORKSPACES.find((w) => w.nav.some((n) => n.path === section)) ?? WORKSPACES[0];
+  const section = pathname.split('/')[1];
+  return WORKSPACES.find((w) => w.nav.some((n) => n.path.split('/')[1] === section)) ?? WORKSPACES[0];
 }
 
 /** Longest nav path that is (or is an ancestor of) the current route — lets

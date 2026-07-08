@@ -3,13 +3,14 @@ import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { PageHead, Tabs, Card, Eyebrow, Avatar } from '@/components';
 import { useActiveUser } from '@/state/ActiveUser';
-import { USERS } from '@/data/users';
 import { SettingRow } from './SettingRow';
-import { UsersTable } from './UsersTable';
 
-type SettingsTab = 'account' | 'notifications' | 'access';
-const VALID_TABS: SettingsTab[] = ['account', 'notifications', 'access'];
+type SettingsTab = 'account' | 'notifications';
+const VALID_TABS: SettingsTab[] = ['account', 'notifications'];
 
+// Users & access moved to Admin -> Users (see views/admin/AdminUsers.tsx) —
+// managing the org roster belongs with the rest of org administration, not
+// mixed in with one person's own account settings.
 export function Settings() {
   const { user: CURRENT_USER } = useActiveUser();
   const [params, setParams] = useSearchParams();
@@ -21,8 +22,8 @@ export function Settings() {
 
   return (
     <div>
-      <PageHead title="Settings" sub="Your account, notifications and the people with access to this region." />
-      <Tabs value={tab} onChange={setTab} items={[{ k: 'account', label: 'Account' }, { k: 'notifications', label: 'Notifications' }, { k: 'access', label: 'Users & access', n: USERS.length }]} />
+      <PageHead title="Settings" sub="Your account and notification preferences." />
+      <Tabs value={tab} onChange={setTab} items={[{ k: 'account', label: 'Account' }, { k: 'notifications', label: 'Notifications' }]} />
 
       {tab === 'account' && (
         <div style={{ display: 'grid', gridTemplateColumns: accountCols, gap: 16, maxWidth: 880 }}>
@@ -61,8 +62,6 @@ export function Settings() {
           <SettingRow label="Weekly region digest" value="Email · Monday 07:00" toggle last />
         </Card>
       )}
-
-      {tab === 'access' && <UsersTable />}
     </div>
   );
 }

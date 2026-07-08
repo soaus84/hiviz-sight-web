@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { colors } from '@/tokens';
-import { PageHead, Search, DataTable, Avatar, Badge, Icon, Drawer, type Column } from '@/components';
+import { PageHead, Btn, Search, DataTable, Avatar, Badge, Icon, Drawer, type Column } from '@/components';
 import { monthRange, memberStats, lastVisitRecency, membersInPurview } from '@/data/leaders';
 import { purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
@@ -40,7 +40,11 @@ export function Leaders() {
 
   return (
     <div>
-      <PageHead title="Leaders" sub={`Members contributing to insights across ${purviewPhrase(region, division)} — visits, observations and how recently they've been on site.`} />
+      <PageHead
+        title="Leaders"
+        sub={`Members contributing to insights across ${purviewPhrase(region, division)} — visits, observations and how recently they've been on site.`}
+        actions={<Btn variant="ghost" icon="download">Export</Btn>}
+      />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <Search placeholder="Search members" width={260} value={query} onChange={setQuery} />
         <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
@@ -61,7 +65,7 @@ export function Leaders() {
       <DataTable columns={cols} rows={rows} rowKey="id" onRow={setSelected} empty="No members in this purview." />
 
       <Drawer open={!!selected} onClose={() => setSelected(null)}>
-        {selected && <MemberDetail u={selected} range={range} onClose={() => setSelected(null)} />}
+        {selected && <MemberDetail u={selected} onClose={() => setSelected(null)} />}
       </Drawer>
     </div>
   );

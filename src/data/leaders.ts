@@ -53,6 +53,17 @@ export function memberStats(member: User, range: MonthRange): MemberStats {
   return { visitCount, obsCount };
 }
 
+/** All-time visit/observation totals — for the member's own profile drawer,
+ * which is a stable identity view and shouldn't shift underneath someone
+ * because they happened to have a different month selected on the list
+ * page. Visits exclude `upcoming` (not yet happened); observations have no
+ * scheduled state so all of them count. */
+export function totalMemberStats(member: User): MemberStats {
+  const visitCount = VISITS.filter((v) => v.visitor === member.name && v.state !== 'upcoming').length;
+  const obsCount = OBSERVATIONS.filter((o) => o.observerName === member.name).length;
+  return { visitCount, obsCount };
+}
+
 export interface VisitRecency {
   label: string;
   /** null = no visits on record — render as plain muted text, not a badge. */

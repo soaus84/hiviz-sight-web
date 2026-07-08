@@ -5,6 +5,11 @@ export interface Drilldown {
   icon: string;
   title: string;
   nav: NavItem[];
+  /** Where the sidebar's "Back" button goes — a fixed destination rather
+   * than browser history, since history can land somewhere other than the
+   * list this drilldown was reached from (e.g. arriving at a site via an
+   * insight rather than the Sites list). */
+  backPath: string;
 }
 
 /**
@@ -23,6 +28,7 @@ export function getDrilldown(pathname: string): Drilldown | null {
   return {
     icon: 'location_on',
     title: site.name,
+    backPath: '/sites',
     nav: [
       { path: base, label: 'Overview', icon: 'summarize' },
       { path: `${base}/insights`, label: 'Insights', icon: 'lightbulb' },
