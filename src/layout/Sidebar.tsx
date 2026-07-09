@@ -67,7 +67,11 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
         <WorkspaceSwitcher active={workspace} collapsed={collapsed} onNavigate={onNavigate} />
       )}
 
-      <div style={{ padding: collapsed ? '6px 8px' : '6px 12px', flex: 1, overflowY: 'auto' }}>
+      <div
+        key={drilldown ? 'drilldown' : `workspace:${workspace.id}`}
+        className="a-navgroup"
+        style={{ padding: collapsed ? '6px 8px' : '6px 12px', flex: 1, overflowY: 'auto' }}
+      >
         {nav.map((n) => {
           const on = n.path === activePath;
           const badge = n.badge?.();

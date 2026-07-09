@@ -72,3 +72,8 @@ table .a-row:hover td:first-child { box-shadow: inset 3px 0 0 #FFFC36; }
   to { transform: none; opacity: 1; }
 }
 .a-pop { animation: a-popin .14s ease-out; }
+@keyframes a-navgroup {
+  from { transform: translateY(6px); opacity: 0; }
+  to { transform: none; opacity: 1; }
+}
+.a-navgroup { animation: a-navgroup .2s cubic-bezier(.2,.7,.3,1); }

@@ -1,7 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { PageHead, Tabs, Btn, Avatar, Badge, DataTable, SignalMix, Dot, type Column } from '@/components';
-import { LiveVisitCard } from '@/views/shared/LiveVisitCard';
 import { VISITS } from '@/data/visits';
 import { inPurview, purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
@@ -23,8 +22,10 @@ export function Visits() {
     upcoming: inRegion.filter((v) => v.state === 'live' || v.state === 'upcoming').length,
     past: inRegion.filter((v) => v.state === 'past').length,
   };
-  const live = inRegion.find((v) => v.state === 'live');
-  const upcoming = inRegion.filter((v) => v.state === 'upcoming');
+  // Live sorts first so it stays the most visible row without needing its
+  // own bespoke layout above the table (see the Status column below, which
+  // already renders a pulsing "Live" badge for it).
+  const upcoming = [...inRegion.filter((v) => v.state === 'live'), ...inRegion.filter((v) => v.state === 'upcoming')];
   const past = inRegion.filter((v) => v.state === 'past');
 
   const scopeCols: Column<Visit>[] = [
@@ -62,10 +63,7 @@ export function Visits() {
       <Tabs value={tab} onChange={setTab} items={[{ k: 'upcoming', label: 'Upcoming', n: counts.upcoming }, { k: 'past', label: 'Past', n: counts.past }]} />
 
       {tab === 'upcoming' && (
-        <>
-          {live && <div style={{ marginBottom: 20 }}><LiveVisitCard v={live} /></div>}
-          <DataTable columns={upcomingCols} rows={upcoming} rowKey="id" onRow={(r) => navigate(`/visits/${r.id}`)} empty={`No upcoming visits in ${purviewPhrase(region, division)}.`} />
-        </>
+        <DataTable columns={upcomingCols} rows={upcoming} rowKey="id" onRow={(r) => navigate(`/visits/${r.id}`)} empty={`No upcoming visits in ${purviewPhrase(region, division)}.`} />
       )}
       {tab === 'past' && <DataTable columns={pastCols} rows={past} rowKey="id" onRow={(r) => navigate(`/visits/${r.id}`)} empty={`No past visits in ${purviewPhrase(region, division)}.`} />}
     </div>

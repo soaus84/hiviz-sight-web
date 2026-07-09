@@ -4,10 +4,18 @@ import { colors } from '@/tokens';
 import { PageHead, Tabs, Card, Btn, DataTable, Drawer, IconBtn, Icon, type Column } from '@/components';
 import { COMPANY_DETAILS, updateCompanyDetails } from '@/data/admin/company';
 import { TERMINOLOGY_TERMS, updateTerminologyLabel, clearTerminologyLabel } from '@/data/admin/terminology';
-import type { TerminologyTerm } from '@/types';
+import type { TerminologyGroup, TerminologyTerm } from '@/types';
 
 type CompanyTab = 'details' | 'terminology';
 const VALID_TABS: CompanyTab[] = ['details', 'terminology'];
+
+// Rendered in this order regardless of TERMINOLOGY_TERMS' array order.
+const TERM_GROUPS: TerminologyGroup[] = ['structure', 'roles', 'taxonomies'];
+const GROUP_LABELS: Record<TerminologyGroup, string> = {
+  structure: 'Structure',
+  roles: 'Roles',
+  taxonomies: 'Taxonomies',
+};
 
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' as const, color: colors.inkMuted, marginBottom: 5 };
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13.5, outline: 'none' };
@@ -68,10 +76,21 @@ function TerminologyList() {
 
   return (
     <div>
-      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, marginBottom: 14, maxWidth: 640 }}>
+      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, marginBottom: 20, maxWidth: 640 }}>
         Override the terms used across the app. These aren't wired into live labels yet — stored here for when they are.
       </div>
-      <DataTable columns={cols} rows={TERMINOLOGY_TERMS} rowKey="id" onRow={openEdit} empty="No terms yet." />
+      {TERM_GROUPS.map((group) => {
+        const rows = TERMINOLOGY_TERMS.filter((t) => t.group === group);
+        if (rows.length === 0) return null;
+        return (
+          <div key={group} style={{ marginBottom: 24 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase', color: colors.inkMuted, marginBottom: 10 }}>
+              {GROUP_LABELS[group]}
+            </div>
+            <DataTable columns={cols} rows={rows} rowKey="id" onRow={openEdit} empty="No terms yet." />
+          </div>
+        );
+      })}
 
       <Drawer open={!!editing} onClose={close}>
         {editing && (

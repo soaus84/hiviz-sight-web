@@ -13,6 +13,11 @@ export interface TagRecord {
   parentId?: string;
 }
 
+/** Groups the Terminology list to mirror Admin's own nav — Structure
+ * (Division/Subdivision/Region/Worksite), Roles (the fixed set of user
+ * roles), Taxonomies (the three Taxonomy lists). */
+export type TerminologyGroup = 'structure' | 'roles' | 'taxonomies';
+
 /** An app-wide vocabulary term (e.g. "Division", "Subdivision") that Admin
  * can rename. The set of terms is fixed — this isn't a free-form tag list,
  * so there's no add/delete, only editing customLabel. Mock only for now:
@@ -24,6 +29,7 @@ export interface TerminologyTerm {
   key: string;
   defaultLabel: string;
   customLabel?: string;
+  group: TerminologyGroup;
 }
 
 export interface CompanyDetails {

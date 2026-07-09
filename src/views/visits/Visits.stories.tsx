@@ -7,7 +7,7 @@ const meta: Meta = {
     layout: 'fullscreen',
     docs: {
       description: {
-        component: 'One of 2 "Tabbed Content" pages (with Settings). Same PageHead + Tabs shape, but the "Active" tab is a bespoke live-visit layout rather than a table — compare against Settings to confirm the Tabs/PageHead composition itself stays consistent even when tab content differs.',
+        component: 'One of 2 "Tabbed Content" pages (with Settings). Same PageHead + Tabs shape as Settings — the "Upcoming" tab is a standard table, with any in-progress visit sorting to the top and showing a pulsing "Live" status in place of the usual briefing badge.',
       },
     },
   },

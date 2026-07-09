@@ -4,12 +4,20 @@ import type { TerminologyTerm } from '@/types';
 // outside Admin reads customLabel yet; this is mock-only until the rest of
 // the app is wired to look terms up here instead of hardcoding them.
 export const TERMINOLOGY_TERMS: TerminologyTerm[] = [
-  { id: 'term1', key: 'division', defaultLabel: 'Division' },
-  { id: 'term2', key: 'subdivision', defaultLabel: 'Subdivision' },
-  { id: 'term3', key: 'region', defaultLabel: 'Region' },
-  { id: 'term4', key: 'worksite', defaultLabel: 'Worksite' },
-  { id: 'term5', key: 'highRiskWork', defaultLabel: 'High-risk work' },
-  { id: 'term6', key: 'safetyPractice', defaultLabel: 'Safety Practice' },
+  // Structure — mirrors the Structure nav item plus the standalone Worksite
+  // entity (Worksites nav), since a worksite is the base unit that
+  // divisions/subdivisions/regions organise.
+  { id: 'term1', key: 'division', defaultLabel: 'Division', group: 'structure' },
+  { id: 'term2', key: 'subdivision', defaultLabel: 'Subdivision', group: 'structure' },
+  { id: 'term3', key: 'region', defaultLabel: 'Region', group: 'structure' },
+  { id: 'term4', key: 'worksite', defaultLabel: 'Worksite', group: 'structure' },
+  // Roles — the fixed set of user roles (see AdminUsers/MemberDetail's ROLES).
+  { id: 'term5', key: 'safetyManagerRole', defaultLabel: 'Safety Manager', group: 'roles' },
+  { id: 'term6', key: 'businessManagerRole', defaultLabel: 'Business Manager', group: 'roles' },
+  // Taxonomies — mirrors the three Taxonomies nav tabs.
+  { id: 'term7', key: 'worksiteType', defaultLabel: 'Worksite type', group: 'taxonomies' },
+  { id: 'term8', key: 'highRiskWork', defaultLabel: 'High-risk work', group: 'taxonomies' },
+  { id: 'term9', key: 'safetyPractice', defaultLabel: 'Safety Practice', group: 'taxonomies' },
 ];
 
 export function updateTerminologyLabel(id: string, customLabel: string): TerminologyTerm | null {
