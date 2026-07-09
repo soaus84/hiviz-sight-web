@@ -1,15 +1,13 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { colors, type Tone } from '@/tokens';
-import { PageHead, Search, Tabs, Btn, Badge, DataTable, Avatar, Drawer, Icon, IconBtn, type Column } from '@/components';
+import { colors } from '@/tokens';
+import { PageHead, Search, Tabs, Btn, Badge, DataTable, Avatar, Drawer, Icon, IconBtn, Toggle, type Column } from '@/components';
 import { USERS, addUser, updateUser, revokeUser, reinstateUser, type UserInput } from '@/data/users';
 import { ADMIN_REGIONS, ADMIN_DIVISIONS } from '@/data/admin/company';
 import { SearchSelect } from './SearchSelect';
 import type { AccessLevel, User, UserStatus } from '@/types';
 
-const ACCESS_TONE: Record<AccessLevel, Tone> = { Admin: 'primary', Manager: 'info', Supervisor: 'success', Observer: 'primary' };
-const ACCESS_OUTLINE: Record<AccessLevel, boolean> = { Admin: false, Manager: false, Supervisor: false, Observer: true };
-const ACCESS_LEVELS: AccessLevel[] = ['Admin', 'Manager', 'Supervisor', 'Observer'];
+const ACCESS_LEVELS: AccessLevel[] = ['Manager', 'Supervisor', 'Observer'];
 // role stays constrained to these two values app-wide — see MemberDetail's
 // role badge, which relies on there only ever being two roles so it never
 // needs to vary its tone per role.
@@ -25,7 +23,7 @@ function isUserStatus(v: string | null): v is UserStatus {
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' as const, color: colors.inkMuted, marginBottom: 5 };
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13.5, outline: 'none', background: colors.panel };
 
-const EMPTY_INPUT: UserInput = { name: '', role: ROLES[0], region: '', division: '', access: 'Observer' };
+const EMPTY_INPUT: UserInput = { name: '', role: ROLES[0], region: '', division: '', access: 'Observer', isAdmin: false };
 
 export function AdminUsers() {
   const [params, setParams] = useSearchParams();
@@ -42,7 +40,7 @@ export function AdminUsers() {
   const set = (field: keyof UserInput) => (v: string) => setInput((i) => ({ ...i, [field]: v }));
 
   const openNew = () => { setEditing('new'); setInput(EMPTY_INPUT); };
-  const openEdit = (u: User) => { setEditing(u); setInput({ name: u.name, role: u.role, region: u.region, division: u.division ?? '', access: u.access }); };
+  const openEdit = (u: User) => { setEditing(u); setInput({ name: u.name, role: u.role, region: u.region, division: u.division ?? '', access: u.access, isAdmin: u.isAdmin ?? false }); };
   const close = () => setEditing(null);
 
   const save = () => {
@@ -79,7 +77,12 @@ export function AdminUsers() {
       </div>
     ) },
     { key: 'region', label: 'Region', w: 130, render: (r) => <span style={{ color: colors.inkSoft }}>{r.region}</span> },
-    { key: 'access', label: 'Access', w: 130, render: (r) => <Badge tone={ACCESS_TONE[r.access]} outline={ACCESS_OUTLINE[r.access]}>{r.access}</Badge> },
+    { key: 'access', label: 'Access', w: 180, render: (r) => (
+      <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+        <Badge tone="primary" outline>{r.access}</Badge>
+        {r.isAdmin && <Badge tone="primary">Admin</Badge>}
+      </div>
+    ) },
     { key: 'sitesCount', label: 'Sites', w: 80, mono: true, render: (r) => <span style={{ fontWeight: 700 }}>{r.sitesCount}</span> },
     { key: 'lastActive', label: 'Last active', w: 130, render: (r) => <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: r.lastActive === 'Online now' ? colors.green : colors.inkSoft, fontWeight: 600 }}>{r.lastActive}</span> },
     { key: 'go', label: '', w: 44, align: 'right', render: () => <Icon name="chevron_right" size={18} color={colors.inkMuted} /> },
@@ -125,6 +128,13 @@ export function AdminUsers() {
                 <select className="a-input" value={input.access} onChange={(e) => set('access')(e.target.value)} style={inputStyle}>
                   {ACCESS_LEVELS.map((a) => <option key={a} value={a}>{a}</option>)}
                 </select>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, marginBottom: 16 }}>
+                <div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600 }}>Admin access</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: colors.inkSoft, marginTop: 2 }}>Additive — grants the Admin workspace on top of their access level above.</div>
+                </div>
+                <Toggle checked={!!input.isAdmin} onChange={(v) => setInput((i) => ({ ...i, isAdmin: v }))} />
               </div>
 
               <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>

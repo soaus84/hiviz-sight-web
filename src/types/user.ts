@@ -1,4 +1,4 @@
-export type AccessLevel = 'Admin' | 'Manager' | 'Supervisor' | 'Observer';
+export type AccessLevel = 'Manager' | 'Supervisor' | 'Observer';
 export type UserStatus = 'active' | 'invited' | 'revoked';
 
 export interface User {
@@ -14,6 +14,12 @@ export interface User {
    * region — see memberInPurview in data/leaders.ts. */
   division?: string;
   access: AccessLevel;
+  /** Additive — grants access to the Admin workspace on top of whatever
+   * access level this person already has (e.g. a Manager can also be an
+   * Admin). Not a 4th AccessLevel value: someone doesn't stop being a
+   * Manager/Supervisor/Observer by also being an Admin. Same convention as
+   * CurrentUser.isAdmin below. */
+  isAdmin?: boolean;
   sitesCount: number;
   lastActive: string;
   status: UserStatus;

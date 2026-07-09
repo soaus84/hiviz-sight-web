@@ -17,6 +17,11 @@ export interface DataTableProps<T> {
   onRow?: (row: T) => void;
   rowKey?: keyof T & string;
   empty?: string;
+  /** Renders the stacked-card layout (normally mobile-only) regardless of
+   * viewport breakpoint — for tables embedded in a fixed-width container
+   * like a Drawer, where the breakpoint hook still reads "desktop" even
+   * though there's no room for real columns. */
+  forceCards?: boolean;
 }
 
 function keyOf<T>(row: T, rowKey: (keyof T & string) | undefined, index: number): string | number {
@@ -24,7 +29,7 @@ function keyOf<T>(row: T, rowKey: (keyof T & string) | undefined, index: number)
   return index;
 }
 
-export function DataTable<T>({ columns, rows, onRow, rowKey, empty }: DataTableProps<T>) {
+export function DataTable<T>({ columns, rows, onRow, rowKey, empty, forceCards }: DataTableProps<T>) {
   const breakpoint = useBreakpoint();
 
   if (rows.length === 0) {
@@ -35,7 +40,7 @@ export function DataTable<T>({ columns, rows, onRow, rowKey, empty }: DataTableP
     );
   }
 
-  if (breakpoint === 'mobile') {
+  if (breakpoint === 'mobile' || forceCards) {
     const [primary, ...rest] = columns;
     return (
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

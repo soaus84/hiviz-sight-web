@@ -1,9 +1,10 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Tabs, Btn, Avatar, Badge, DataTable, SignalMix, Dot, type Column } from '@/components';
+import { PageHead, Tabs, Btn, Avatar, Badge, DataTable, Drawer, SignalMix, Dot, type Column } from '@/components';
 import { VISITS } from '@/data/visits';
 import { inPurview, purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
+import { VisitDrawerPanel } from './VisitDrawerPanel';
 import type { Visit } from '@/types';
 
 type VisitTab = 'upcoming' | 'past';
@@ -17,6 +18,18 @@ export function Visits() {
   const tab = (VALID_TABS as string[]).includes(tabParam || '') ? (tabParam as VisitTab) : 'upcoming';
   const setTab = (k: string) => setParams(k === 'upcoming' ? {} : { tab: k });
 
+  const selId = params.get('visit');
+  const openVisit = (visitId: string) => {
+    const next = new URLSearchParams(params);
+    next.set('visit', visitId);
+    setParams(next);
+  };
+  const closeVisit = () => {
+    const next = new URLSearchParams(params);
+    next.delete('visit');
+    setParams(next);
+  };
+
   const inRegion = VISITS.filter((v) => inPurview(v, { region, division }));
   const counts = {
     upcoming: inRegion.filter((v) => v.state === 'live' || v.state === 'upcoming').length,
@@ -27,6 +40,7 @@ export function Visits() {
   // already renders a pulsing "Live" badge for it).
   const upcoming = [...inRegion.filter((v) => v.state === 'live'), ...inRegion.filter((v) => v.state === 'upcoming')];
   const past = inRegion.filter((v) => v.state === 'past');
+  const sel = inRegion.find((v) => v.id === selId) || null;
 
   const scopeCols: Column<Visit>[] = [
     ...(isAllRegions ? [{ key: 'region', label: 'Region', w: 100, render: (r: Visit) => <span style={{ color: colors.inkSoft }}>{r.region}</span> }] : []),
@@ -63,9 +77,13 @@ export function Visits() {
       <Tabs value={tab} onChange={setTab} items={[{ k: 'upcoming', label: 'Upcoming', n: counts.upcoming }, { k: 'past', label: 'Past', n: counts.past }]} />
 
       {tab === 'upcoming' && (
-        <DataTable columns={upcomingCols} rows={upcoming} rowKey="id" onRow={(r) => navigate(`/visits/${r.id}`)} empty={`No upcoming visits in ${purviewPhrase(region, division)}.`} />
+        <DataTable columns={upcomingCols} rows={upcoming} rowKey="id" onRow={(r) => openVisit(r.id)} empty={`No upcoming visits in ${purviewPhrase(region, division)}.`} />
       )}
-      {tab === 'past' && <DataTable columns={pastCols} rows={past} rowKey="id" onRow={(r) => navigate(`/visits/${r.id}`)} empty={`No past visits in ${purviewPhrase(region, division)}.`} />}
+      {tab === 'past' && <DataTable columns={pastCols} rows={past} rowKey="id" onRow={(r) => openVisit(r.id)} empty={`No past visits in ${purviewPhrase(region, division)}.`} />}
+
+      <Drawer open={!!sel} onClose={closeVisit}>
+        {sel && <VisitDrawerPanel v={sel} onClose={closeVisit} />}
+      </Drawer>
     </div>
   );
 }
