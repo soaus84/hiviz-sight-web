@@ -1,7 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
-import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { Stat, Badge, Drawer, SignalMix, Dot, DataTable, Card, Eyebrow, type Column } from '@/components';
+import { Badge, Drawer, SignalMix, Dot, DataTable, Card, Eyebrow, type Column } from '@/components';
 import { INSIGHTS_BY_ID, INSIGHT_KIND_LABEL } from '@/data/insights';
 import { OBSERVATIONS, SIGNAL_DISPLAY, energyLabel } from '@/data/observations';
 import { ObsDetail } from '@/views/observations/ObsDetail';
@@ -23,7 +22,6 @@ const STATUS_LABEL: Record<Observation['status'], [string, Tone]> = {
  * useBreakpoint() still reads "desktop" since the browser window is wide. */
 export function VisitDetailBody({ v, nestedInDrawer }: { v: Visit; nestedInDrawer?: boolean }) {
   const navigate = useNavigate();
-  const breakpoint = useBreakpoint();
   const [params, setParams] = useSearchParams();
 
   const observations = OBSERVATIONS.filter((o) => o.visitId === v.id);
@@ -41,8 +39,6 @@ export function VisitDetailBody({ v, nestedInDrawer }: { v: Visit; nestedInDrawe
     setParams(next);
   };
 
-  const statCols = breakpoint === 'mobile' ? '1fr' : 'repeat(2, 1fr)';
-
   const cols: Column<Observation>[] = [
     { key: 'id', label: 'ID', w: 96, mono: true, render: (r) => <span style={{ color: colors.inkSoft, fontWeight: 700 }}>{r.id}</span> },
     { key: 'when', label: 'When', w: 110, mono: true, render: (r) => <span style={{ color: colors.inkSoft }}>{r.when}</span> },
@@ -54,19 +50,15 @@ export function VisitDetailBody({ v, nestedInDrawer }: { v: Visit; nestedInDrawe
 
   return (
     <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24, flexWrap: 'wrap' }}>
         {v.state === 'live' && (
           <Badge tone="success" outline>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Dot tone={colors.green} size={6} pulse />Live on site</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><Dot tone={colors.green} size={6} pulse />Live on site · {v.elapsed ?? '—'}</span>
           </Badge>
         )}
         {v.state === 'upcoming' && (v.briefing === 'ready' ? <Badge tone="success" icon="check">Briefing ready</Badge> : <Badge tone="warning">Briefing pending</Badge>)}
         {v.ledToInsight && <Badge tone="primary" outline icon="lightbulb">Led to insight</Badge>}
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: statCols, gap: 16, marginBottom: 24, maxWidth: 560 }}>
-        <Stat label={v.state === 'live' ? 'Elapsed' : 'Visit date'} value={v.state === 'live' ? (v.elapsed ?? '—') : v.when} icon="schedule" />
-        <Stat label="Observations" value={observations.length} icon="visibility" />
+        <Badge tone="primary" outline icon="visibility">{observations.length} observation{observations.length === 1 ? '' : 's'}</Badge>
       </div>
 
       {v.state === 'upcoming' && (v.focusNotes || v.relatedInsightIds?.length) && (

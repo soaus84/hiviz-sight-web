@@ -11,3 +11,12 @@ export function formatVisitWhen(date: string, time: string): string {
   const dt = new Date(y, m - 1, d);
   return `${WEEKDAYS[dt.getDay()]} ${dt.getDate()} ${MONTHS[dt.getMonth()]} · ${time}`;
 }
+
+/** Weekday + zero-padded day-of-month, for the pseudo-calendar date tile
+ * (e.g. visit drawers) — a compact stand-in for spelling the whole date out
+ * in a giant Stat-style number. */
+export function dayParts(date: string): { weekday: string; day: string } {
+  const [y, m, d] = date.split('-').map(Number);
+  const dt = new Date(y, m - 1, d);
+  return { weekday: WEEKDAYS[dt.getDay()], day: String(dt.getDate()).padStart(2, '0') };
+}
