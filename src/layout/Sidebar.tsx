@@ -153,30 +153,21 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
         <button
           className="a-nav"
           onClick={() => go('/settings')}
+          title={collapsed ? `${user.name} · Account` : undefined}
           style={{
             width: '100%',
             minHeight: 44,
             display: 'flex',
             alignItems: 'center',
             justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 12,
-            padding: collapsed ? '9px 0' : '9px 12px',
-            marginBottom: 4,
+            gap: 11,
+            padding: collapsed ? '8px 0' : '8px 10px',
             borderRadius: 'var(--radius-md)',
             border: 'none',
             cursor: 'pointer',
             textAlign: 'left',
             background: onSettings ? 'rgba(255,255,255,0.08)' : 'transparent',
-            color: onSettings ? '#fff' : colors.sideMuted,
           }}
-        >
-          <Icon name="settings" size={20} color={onSettings ? colors.hi : colors.sideMuted} fill={onSettings ? 1 : 0} />
-          {!collapsed && <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 600 }}>Settings</span>}
-        </button>
-        <button
-          className="a-nav"
-          onClick={() => go('/settings')}
-          style={{ width: '100%', minHeight: 44, display: 'flex', alignItems: 'center', justifyContent: collapsed ? 'center' : 'flex-start', gap: 11, padding: collapsed ? '8px 0' : '8px 10px', borderRadius: 'var(--radius-md)', border: 'none', cursor: 'pointer', textAlign: 'left', background: 'transparent' }}
         >
           <Avatar name={user.name} size={34} tone={colors.hi} />
           {!collapsed && (
@@ -184,7 +175,7 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
                 {user.name}
               </div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11.5, color: colors.sideMuted, marginTop: 1 }}>{user.role}</div>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11.5, color: onSettings ? colors.sideText : colors.sideMuted, marginTop: 1 }}>{user.role}</div>
             </div>
           )}
         </button>
