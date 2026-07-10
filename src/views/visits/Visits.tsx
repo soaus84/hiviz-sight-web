@@ -1,14 +1,17 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Tabs, Btn, Avatar, Badge, DataTable, Drawer, SignalMix, Dot, type Column } from '@/components';
+import { PageHead, Tabs, Btn, IconBtn, Avatar, Badge, DataTable, Drawer, SignalMix, Dot, type Column } from '@/components';
 import { VISITS } from '@/data/visits';
 import { inPurview, purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
+import { VisitDateTile } from './VisitDateTile';
 import { VisitDrawerPanel } from './VisitDrawerPanel';
+import { VisitsMap } from './VisitsMap';
 import type { Visit } from '@/types';
 
 type VisitTab = 'upcoming' | 'past';
 const VALID_TABS: VisitTab[] = ['upcoming', 'past'];
+type VisitView = 'list' | 'map';
 
 export function Visits() {
   const navigate = useNavigate();
@@ -16,7 +19,17 @@ export function Visits() {
   const [params, setParams] = useSearchParams();
   const tabParam = params.get('tab');
   const tab = (VALID_TABS as string[]).includes(tabParam || '') ? (tabParam as VisitTab) : 'upcoming';
-  const setTab = (k: string) => setParams(k === 'upcoming' ? {} : { tab: k });
+  const setTab = (k: string) => {
+    const next = new URLSearchParams(params);
+    if (k === 'upcoming') next.delete('tab'); else next.set('tab', k);
+    setParams(next);
+  };
+  const view: VisitView = params.get('view') === 'map' ? 'map' : 'list';
+  const setView = (v: VisitView) => {
+    const next = new URLSearchParams(params);
+    if (v === 'list') next.delete('view'); else next.set('view', v);
+    setParams(next);
+  };
 
   const selId = params.get('visit');
   const openVisit = (visitId: string) => {
@@ -48,7 +61,12 @@ export function Visits() {
   ];
 
   const upcomingCols: Column<Visit>[] = [
-    { key: 'siteName', label: 'Site', render: (r) => <span style={{ fontWeight: 600 }}>{r.siteName}</span> },
+    { key: 'siteName', label: 'Site', render: (r) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <VisitDateTile date={r.date} size={36} />
+        <span style={{ fontWeight: 600 }}>{r.siteName}</span>
+      </div>
+    ) },
     ...scopeCols,
     { key: 'visitor', label: 'Visitor', w: 160, render: (r) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Avatar name={r.visitor} size={24} /> {r.visitor}</span> },
     { key: 'when', label: 'When', w: 180, mono: true, render: (r) => <span style={{ color: colors.inkSoft }}>{r.when}</span> },
@@ -62,7 +80,12 @@ export function Visits() {
     },
   ];
   const pastCols: Column<Visit>[] = [
-    { key: 'siteName', label: 'Site', render: (r) => <span style={{ fontWeight: 600 }}>{r.siteName}</span> },
+    { key: 'siteName', label: 'Site', render: (r) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <VisitDateTile date={r.date} size={36} />
+        <span style={{ fontWeight: 600 }}>{r.siteName}</span>
+      </div>
+    ) },
     ...scopeCols,
     { key: 'visitor', label: 'Visitor', w: 160, render: (r) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Avatar name={r.visitor} size={24} /> {r.visitor}</span> },
     { key: 'when', label: 'When', w: 130, mono: true, render: (r) => <span style={{ color: colors.inkSoft }}>{r.when}</span> },
@@ -73,13 +96,23 @@ export function Visits() {
 
   return (
     <div>
-      <PageHead title="Visits" sub={`Plan, brief and review site visits across ${purviewPhrase(region, division)}.`} actions={<><Btn variant="ghost" icon="download">Export</Btn><Btn variant="accent" icon="add" onClick={() => navigate('/visits/new')}>Plan a visit</Btn></>} />
+      <PageHead
+        title="Visits"
+        sub={`Plan, brief and review site visits across ${purviewPhrase(region, division)}.`}
+        actions={<>
+          <IconBtn name="view_list" active={view === 'list'} onClick={() => setView('list')} />
+          <IconBtn name="map" active={view === 'map'} onClick={() => setView('map')} />
+          <Btn variant="ghost" icon="download">Export</Btn>
+          <Btn variant="accent" icon="add" onClick={() => navigate('/visits/new')}>Plan a visit</Btn>
+        </>}
+      />
       <Tabs value={tab} onChange={setTab} items={[{ k: 'upcoming', label: 'Upcoming', n: counts.upcoming }, { k: 'past', label: 'Past', n: counts.past }]} />
 
-      {tab === 'upcoming' && (
+      {view === 'map' && <VisitsMap visits={tab === 'upcoming' ? upcoming : past} onSelect={openVisit} />}
+      {view === 'list' && tab === 'upcoming' && (
         <DataTable columns={upcomingCols} rows={upcoming} rowKey="id" onRow={(r) => openVisit(r.id)} empty={`No upcoming visits in ${purviewPhrase(region, division)}.`} />
       )}
-      {tab === 'past' && <DataTable columns={pastCols} rows={past} rowKey="id" onRow={(r) => openVisit(r.id)} empty={`No past visits in ${purviewPhrase(region, division)}.`} />}
+      {view === 'list' && tab === 'past' && <DataTable columns={pastCols} rows={past} rowKey="id" onRow={(r) => openVisit(r.id)} empty={`No past visits in ${purviewPhrase(region, division)}.`} />}
 
       <Drawer open={!!sel} onClose={closeVisit}>
         {sel && <VisitDrawerPanel v={sel} onClose={closeVisit} />}

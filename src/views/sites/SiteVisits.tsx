@@ -4,6 +4,7 @@ import { Tabs, Avatar, Badge, DataTable, Drawer, SignalMix, Dot, type Column } f
 import { SiteHeader } from './SiteHeader';
 import { SITES } from '@/data/sites';
 import { VISITS } from '@/data/visits';
+import { VisitDateTile } from '@/views/visits/VisitDateTile';
 import { VisitDrawerPanel } from '@/views/visits/VisitDrawerPanel';
 import type { Visit } from '@/types';
 
@@ -45,7 +46,12 @@ export function SiteVisits() {
   };
 
   const upcomingCols: Column<Visit>[] = [
-    { key: 'visitor', label: 'Visitor', w: 180, render: (r) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Avatar name={r.visitor} size={24} /> {r.visitor}</span> },
+    { key: 'visitor', label: 'Visitor', w: 220, render: (r) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <VisitDateTile date={r.date} size={36} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Avatar name={r.visitor} size={24} /> {r.visitor}</span>
+      </div>
+    ) },
     { key: 'when', label: 'When', w: 180, mono: true, render: (r) => <span style={{ color: colors.inkSoft }}>{r.when}</span> },
     {
       key: 'briefing',
@@ -57,7 +63,12 @@ export function SiteVisits() {
     },
   ];
   const pastCols: Column<Visit>[] = [
-    { key: 'visitor', label: 'Visitor', w: 180, render: (r) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Avatar name={r.visitor} size={24} /> {r.visitor}</span> },
+    { key: 'visitor', label: 'Visitor', w: 220, render: (r) => (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
+        <VisitDateTile date={r.date} size={36} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}><Avatar name={r.visitor} size={24} /> {r.visitor}</span>
+      </div>
+    ) },
     { key: 'when', label: 'When', w: 140, mono: true, render: (r) => <span style={{ color: colors.inkSoft }}>{r.when}</span> },
     { key: 'observationCount', label: 'Obs', w: 70, mono: true, render: (r) => <span style={{ fontWeight: 700 }}>{r.observationCount}</span> },
     { key: 'signals', label: 'Signal mix', w: 150, render: (r) => <SignalMix s={r.signals} /> },

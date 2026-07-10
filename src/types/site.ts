@@ -32,4 +32,10 @@ export interface Site {
   needsVisit?: boolean;
   supervisor: string;
   crewSize: number;
+  /** Position on the schematic (non-geographic) regional map, as a 0-100
+   * percentage of the map canvas — not real coordinates, this app has no
+   * mapping API/key. Optional since not every future site needs to be
+   * placed on the map immediately. */
+  mapX?: number;
+  mapY?: number;
 }
