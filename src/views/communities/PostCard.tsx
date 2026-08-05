@@ -1,5 +1,6 @@
 import { colors } from '@/tokens';
 import { Card, Avatar, Badge, Icon } from '@/components';
+import { renderMarkdownLite } from '@/utils/markdownLite';
 import { KIND_BADGE } from './postKind';
 import { PollBars } from './PollBars';
 import type { Post } from '@/types';
@@ -23,7 +24,7 @@ export function PostCard({ p, onOpen }: { p: Post; onOpen: () => void }) {
         {kindBadge && <Badge tone={kindBadge.tone} outline icon={kindBadge.icon}>{kindBadge.label}</Badge>}
       </div>
       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 16, fontWeight: 700, letterSpacing: -0.3, lineHeight: 1.3 }}>{p.title}</div>
-      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, color: colors.inkSoft, marginTop: 7, lineHeight: 1.55, fontWeight: 500 }}>{p.body}</div>
+      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, color: colors.inkSoft, marginTop: 7, lineHeight: 1.55, fontWeight: 500 }}>{renderMarkdownLite(p.body)}</div>
 
       {p.kind === 'poll' && p.pollOptions && (
         <div style={{ marginTop: 14 }}><PollBars options={p.pollOptions} /></div>

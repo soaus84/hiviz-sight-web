@@ -1,14 +1,17 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { PageHead, Btn, Stat, Card, Eyebrow, AINote, LinkBtn } from '@/components';
 import { COMMUNITIES, POSTS } from '@/data/communities';
 import { PostCard } from './PostCard';
+import { NewPostDrawer } from './NewPostDrawer';
 
 export function CommunityDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const breakpoint = useBreakpoint();
+  const [newPostOpen, setNewPostOpen] = useState(false);
   const community = COMMUNITIES.find((c) => c.id === id) ?? COMMUNITIES[0];
   const posts = POSTS.filter((p) => p.community === community.name).sort((a, b) => a.postedAgoMinutes - b.postedAgoMinutes);
   const seedPost = posts.find((p) => p.generated);
@@ -23,7 +26,7 @@ export function CommunityDetail() {
       <PageHead
         title={community.name}
         sub={`${community.kind} community · ${community.members} members`}
-        actions={<Btn variant="accent" icon="add">New post</Btn>}
+        actions={<Btn variant="accent" icon="add" onClick={() => setNewPostOpen(true)}>New post</Btn>}
       />
 
       <div style={{ display: 'grid', gridTemplateColumns: statCols, gap: 16, marginBottom: 24, maxWidth: 460 }}>
@@ -48,6 +51,7 @@ export function CommunityDetail() {
         )}
         {posts.map((p) => <PostCard key={p.id} p={p} onOpen={() => navigate(`/communities/thread/${p.id}`)} />)}
       </div>
+      <NewPostDrawer open={newPostOpen} onClose={() => setNewPostOpen(false)} defaultCommunity={community.name} />
     </div>
   );
 }

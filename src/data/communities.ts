@@ -1,4 +1,4 @@
-import type { Community, Post, ThreadExtra } from '@/types';
+import type { Community, Post, PollOption, PostKind, ThreadExtra } from '@/types';
 
 export const COMMUNITIES: Community[] = [
   { id: 'c1', name: 'Hot Works', kind: 'Practice', members: 142, icon: 'local_fire_department' },
@@ -105,3 +105,30 @@ export const THREADS: Record<string, ThreadExtra> = {
     ],
   },
 };
+
+export function createPost(input: {
+  kind: PostKind;
+  community: string;
+  author: string;
+  role?: string;
+  title: string;
+  body: string;
+  pollOptions?: PollOption[];
+}): Post {
+  const post: Post = {
+    id: `p${POSTS.length + 1}`,
+    kind: input.kind,
+    author: input.author,
+    role: input.role,
+    community: input.community,
+    when: 'Just now',
+    postedAgoMinutes: 0,
+    title: input.title,
+    body: input.body,
+    replies: 0,
+    likes: 0,
+    pollOptions: input.pollOptions,
+  };
+  POSTS.unshift(post);
+  return post;
+}

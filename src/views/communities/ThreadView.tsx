@@ -3,6 +3,7 @@ import { colors } from '@/tokens';
 import { Card, Avatar, Badge, AINote, Icon, Btn, LinkBtn } from '@/components';
 import { useActiveUser } from '@/state/ActiveUser';
 import { COMMUNITIES } from '@/data/communities';
+import { renderMarkdownLite } from '@/utils/markdownLite';
 import { KIND_BADGE } from './postKind';
 import { PollBars } from './PollBars';
 import type { Post, ThreadReply } from '@/types';
@@ -50,7 +51,7 @@ export function ThreadView({ post: p, question, replies }: ThreadViewProps) {
           {kindBadge && <Badge tone={kindBadge.tone} outline icon={kindBadge.icon}>{kindBadge.label}</Badge>}
         </div>
         <h2 style={{ fontFamily: 'var(--font-sans)', margin: 0, fontSize: 22, fontWeight: 700, letterSpacing: -0.4, lineHeight: 1.25 }}>{p.title}</h2>
-        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: colors.inkSoft, marginTop: 10, lineHeight: 1.6, fontWeight: 500 }}>{p.body}</div>
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, color: colors.inkSoft, marginTop: 10, lineHeight: 1.6, fontWeight: 500 }}>{renderMarkdownLite(p.body)}</div>
 
         {p.kind === 'poll' && p.pollOptions && (
           <div style={{ marginTop: 16 }}><PollBars options={p.pollOptions} /></div>
