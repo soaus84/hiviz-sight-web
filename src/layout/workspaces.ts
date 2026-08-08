@@ -46,7 +46,7 @@ export const WORKSPACES: Workspace[] = [
     home: '/communities',
     nav: [
       { path: '/communities', label: 'Feed', icon: 'dynamic_feed', badge: () => countUnseenPosts(POSTS) },
-      { path: '/communities/mine', label: 'My Communities', icon: 'groups' },
+      { path: '/communities/mine', label: 'Communities', icon: 'groups' },
     ],
   },
   {

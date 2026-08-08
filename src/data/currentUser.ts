@@ -13,8 +13,9 @@ import type { CurrentUser } from '@/types';
  * his regional purview.
  */
 export const SWITCHABLE_USERS: CurrentUser[] = [
-  { name: 'Jordan Marsh', initials: 'JM', role: 'Region Manager', region: 'Pilbara', email: 'j.marsh@hiviz.io', isAdmin: true },
-  { name: 'Renee Castillo', initials: 'RC', role: 'Divisional Manager — Gold', region: 'Pilbara', division: 'Gold', email: 'r.castillo@hiviz.io' },
+  // c-hrw-hrw20 = Hot work, c-sp-sp8 = Permit to work, c-hrw-hrw32 = Work at heights, c-hrw-hrw3 = Confined spaces
+  { name: 'Jordan Marsh', initials: 'JM', role: 'Region Manager', region: 'Pilbara', email: 'j.marsh@hiviz.io', isAdmin: true, joinedCommunityIds: ['c-hrw-hrw20', 'c-sp-sp8'] },
+  { name: 'Renee Castillo', initials: 'RC', role: 'Divisional Manager — Gold', region: 'Pilbara', division: 'Gold', subdivision: 'Open Pit', email: 'r.castillo@hiviz.io', joinedCommunityIds: ['c-hrw-hrw32', 'c-hrw-hrw3'] },
 ];
 
 export const CURRENT_USER: CurrentUser = SWITCHABLE_USERS[0];

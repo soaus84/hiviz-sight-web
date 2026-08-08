@@ -41,16 +41,16 @@ function makeId(prefix: string, list: TagRecord[]): string {
   return `${prefix}${list.length + 1}-${Date.now()}`;
 }
 
-export function addTag(list: TagRecord[], idPrefix: string, name: string, description?: string, parentId?: string): TagRecord {
-  const record: TagRecord = { id: makeId(idPrefix, list), name, description: description || undefined, parentId };
+export function addTag(list: TagRecord[], idPrefix: string, name: string, description?: string, parentId?: string, icon?: string): TagRecord {
+  const record: TagRecord = { id: makeId(idPrefix, list), name, description: description || undefined, parentId, icon: icon || undefined };
   list.push(record);
   return record;
 }
 
-export function updateTag(list: TagRecord[], id: string, name: string, description?: string, parentId?: string): TagRecord | null {
+export function updateTag(list: TagRecord[], id: string, name: string, description?: string, parentId?: string, icon?: string): TagRecord | null {
   const idx = list.findIndex((t) => t.id === id);
   if (idx === -1) return null;
-  list[idx] = { ...list[idx], name, description: description || undefined, parentId };
+  list[idx] = { ...list[idx], name, description: description || undefined, parentId, icon: icon || undefined };
   return list[idx];
 }
 

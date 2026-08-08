@@ -11,6 +11,10 @@ export interface TagRecord {
    * Subdivision's parent Division. Only set for lists rendered with
    * TagList's `parent` prop. */
   parentId?: string;
+  /** Material Symbols ligature name. Only editable/shown for lists rendered
+   * with TagList's `withIcon` prop (the three Taxonomy lists) — Structure's
+   * Division/Subdivision/Region lists don't use it. */
+  icon?: string;
 }
 
 /** Groups the Terminology list to mirror Admin's own nav — Structure

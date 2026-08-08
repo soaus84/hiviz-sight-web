@@ -2,14 +2,14 @@ import { useEffect, useState } from 'react';
 import { colors } from '@/tokens';
 import { Icon } from '@/components';
 import { REGIONS, COMPANY, type RegionName } from '@/data/regions';
-import { DIVISIONS, ALL_DIVISIONS, type DivisionName } from '@/data/divisions';
+import { DIVISIONS, ALL_DIVISIONS, SUBDIVISIONS, type DivisionName } from '@/data/divisions';
 import { purviewLabel, purviewIcon, regionCompatibleWithDivision, divisionCompatibleWithRegion } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
 import { useActiveUser } from '@/state/ActiveUser';
 
-// PREVIEW ONLY — mock subdivisions for the Option A ("inline nested tree")
-// review, not wired into the real purview model. Subdivision isn't a field
-// on PurviewFilter/PurviewScopeValue yet, so selecting one here just selects
+// PREVIEW ONLY — the Option A ("inline nested tree") review, not wired into
+// the real purview model. Subdivision isn't a field on
+// PurviewFilter/PurviewScopeValue yet, so selecting one here just selects
 // its parent Division for real (same as clicking the Division row) and
 // tracks the specific subdivision purely as local UI state for the
 // checkmark — the trigger button/purviewLabel still only ever reads
@@ -17,12 +17,9 @@ import { useActiveUser } from '@/state/ActiveUser';
 // results would mean giving Subdivision the same typed
 // treatment Region/Division already have (a literal union, a
 // `subdivisionMatchesScope`, a third PurviewFilter field) — deliberately
-// out of scope here. Easy to strip: this block + the two bits marked
-// "subdivision preview" below.
-const SUBDIVISIONS_MOCK: Partial<Record<DivisionName, string[]>> = {
-  'Iron Ore': ['Crushing & Screening', 'Rail & Port'],
-  Gold: ['Open Pit'],
-};
+// out of scope here. Easy to strip: the bits marked "subdivision preview"
+// below. (The subdivision vocabulary itself, SUBDIVISIONS, is real shared
+// data now — Communities' org-level communities read the same list.)
 
 export function PurviewSwitcher() {
   const [open, setOpen] = useState(false);
@@ -53,7 +50,7 @@ export function PurviewSwitcher() {
   //    selected subdivision without going through this component's own
   //    handlers (e.g. the "Back to my purview" reset).
   useEffect(() => {
-    const stillValid = division !== ALL_DIVISIONS && SUBDIVISIONS_MOCK[division]?.includes(selectedSubdivision ?? '');
+    const stillValid = division !== ALL_DIVISIONS && SUBDIVISIONS[division]?.includes(selectedSubdivision ?? '');
     if (selectedSubdivision && !stillValid) {
       setSelectedSubdivision(null);
       setExpandedDivision(null);
@@ -154,7 +151,7 @@ export function PurviewSwitcher() {
               const exactlySelected = on && !selectedSubdivision;
               const isHome = d === homeDivision;
               const compatible = divisionCompatibleWithRegion(d, region);
-              const subdivisions = SUBDIVISIONS_MOCK[d]; // subdivision preview
+              const subdivisions = SUBDIVISIONS[d]; // subdivision preview
               const expanded = expandedDivision === d; // subdivision preview
               return (
                 <div key={d}>

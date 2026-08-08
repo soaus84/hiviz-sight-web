@@ -5,6 +5,7 @@ import { IconBtn } from '@/components';
 import { NOTIF_UNREAD } from '@/data/notifications';
 import { NotifMenu } from './NotifMenu';
 import { PurviewSwitcher } from './PurviewSwitcher';
+import { CommunityScopeSwitcher } from './CommunityScopeSwitcher';
 import { UserSwitcher } from './UserSwitcher';
 import { getDrilldown } from './drilldowns';
 import type { Breakpoint } from '@/hooks/useBreakpoint';
@@ -22,10 +23,13 @@ export function Topbar({ breakpoint, onMenuClick }: TopbarProps) {
   // shown disabled (a dead control with no visible reason why is more
   // confusing than no control at all). Same reasoning for Admin: nothing
   // under it (Company, Users, Taxonomies, Worksites, API Tokens) is
-  // purview-scoped at all.
+  // purview-scoped at all. Communities doesn't hide the slot, though — it
+  // swaps in CommunityScopeSwitcher, since region/division still don't mean
+  // anything there but an all-vs-associated filter does.
   const pathname = useLocation().pathname;
   const inSiteContext = !!getDrilldown(pathname);
   const inAdminContext = pathname.startsWith('/admin');
+  const inCommunitiesContext = pathname.startsWith('/communities');
 
   return (
     <div
@@ -47,7 +51,7 @@ export function Topbar({ breakpoint, onMenuClick }: TopbarProps) {
         <IconBtn name="menu" onClick={onMenuClick} />
       )}
 
-      {!inSiteContext && !inAdminContext && <PurviewSwitcher />}
+      {inCommunitiesContext ? <CommunityScopeSwitcher /> : !inSiteContext && !inAdminContext && <PurviewSwitcher />}
       <div style={{ flex: 1 }} />
       <div style={{ position: 'relative' }}>
         <IconBtn name="notifications" badge={NOTIF_UNREAD} active={notifOpen} onClick={() => setNotifOpen((v) => !v)} />

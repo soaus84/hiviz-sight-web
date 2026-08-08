@@ -1,4 +1,6 @@
-export type CommunityKind = 'Practice' | 'Regional';
+export type CommunityKind = 'Org' | 'HighRiskWork' | 'SafetyPractice' | 'Regional';
+
+export type OrgLevel = 'company' | 'division' | 'subdivision';
 
 export interface Community {
   id: string;
@@ -6,6 +8,18 @@ export interface Community {
   kind: CommunityKind;
   members: number;
   icon: string;
+  /** Org-level communities (kind: 'Org') mirror the Company/Division/
+   * Subdivision hierarchy from the purview model — membership is derived
+   * from where a person sits (see isMyCommunity in data/communities.ts),
+   * not joined. Undefined for HighRiskWork/SafetyPractice/Regional, which
+   * stay opt-in. */
+  orgLevel?: OrgLevel;
+  division?: string;
+  subdivision?: string;
+  /** Id of the Admin Taxonomy entry (HIGH_RISK_WORK/SAFETY_PRACTICES) this
+   * community was generated from — see data/communities.ts. Undefined for
+   * Org/Regional, which aren't taxonomy-derived. */
+  taxonomyId?: string;
 }
 
 export type PostKind = 'discussion' | 'poll' | 'briefing';

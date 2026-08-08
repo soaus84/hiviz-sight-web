@@ -1,19 +1,64 @@
-import type { Community, Post, PollOption, PostKind, ThreadExtra } from '@/types';
+import { HIGH_RISK_WORK, SAFETY_PRACTICES } from './admin/taxonomies';
+import type { Community, CurrentUser, Post, PollOption, PostKind, ThreadExtra } from '@/types';
+
+// Stable, deterministic flavour number — not meant to mean anything beyond
+// "looks like a real member count," same as the hand-authored Org/Regional
+// entries below.
+function pseudoMemberCount(seed: string): number {
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) % 1000;
+  return 20 + (hash % 160);
+}
+
+// One community per Admin Taxonomy entry — genuinely generated from
+// HIGH_RISK_WORK/SAFETY_PRACTICES (taxonomyId links back), not hand-authored
+// like the four "Hot Works"/"Work at Heights"/etc. placeholders these
+// replace. Icon comes straight from the taxonomy entry, so an icon picked in
+// Admin shows up here automatically.
+const HIGH_RISK_WORK_COMMUNITIES: Community[] = HIGH_RISK_WORK.map((t) => ({
+  id: `c-hrw-${t.id}`, name: t.name, kind: 'HighRiskWork', members: pseudoMemberCount(t.id), icon: t.icon || 'sell', taxonomyId: t.id,
+}));
+const SAFETY_PRACTICE_COMMUNITIES: Community[] = SAFETY_PRACTICES.map((t) => ({
+  id: `c-sp-${t.id}`, name: t.name, kind: 'SafetyPractice', members: pseudoMemberCount(t.id), icon: t.icon || 'sell', taxonomyId: t.id,
+}));
 
 export const COMMUNITIES: Community[] = [
-  { id: 'c1', name: 'Hot Works', kind: 'Practice', members: 142, icon: 'local_fire_department' },
-  { id: 'c2', name: 'Work at Heights', kind: 'Practice', members: 98, icon: 'health_and_safety' },
-  { id: 'c3', name: 'PTW Practice', kind: 'Practice', members: 67, icon: 'assignment' },
-  { id: 'c4', name: 'Confined Space', kind: 'Practice', members: 54, icon: 'frame_inspect' },
   { id: 'c5', name: 'NSW Operations', kind: 'Regional', members: 34, icon: 'apartment' },
+  // Org-level — one per Company/Division/Subdivision tier, mirroring the
+  // purview model exactly (see data/divisions.ts). Membership is computed
+  // by isMyCommunity below, not stored — nobody "joins" their own division.
+  // Declared Parent > Subs > Parent > Subs (not grouped by tier) so the
+  // hierarchy reads directly from array order — MyCommunities renders Org
+  // communities in this order as-is.
+  { id: 'c6', name: 'Company', kind: 'Org', orgLevel: 'company', members: 480, icon: 'corporate_fare' },
+  { id: 'c7', name: 'Iron Ore', kind: 'Org', orgLevel: 'division', division: 'Iron Ore', members: 260, icon: 'category' },
+  { id: 'c9', name: 'Crushing & Screening', kind: 'Org', orgLevel: 'subdivision', division: 'Iron Ore', subdivision: 'Crushing & Screening', members: 74, icon: 'subdirectory_arrow_right' },
+  { id: 'c10', name: 'Rail & Port', kind: 'Org', orgLevel: 'subdivision', division: 'Iron Ore', subdivision: 'Rail & Port', members: 58, icon: 'subdirectory_arrow_right' },
+  { id: 'c8', name: 'Gold', kind: 'Org', orgLevel: 'division', division: 'Gold', members: 190, icon: 'category' },
+  { id: 'c11', name: 'Open Pit', kind: 'Org', orgLevel: 'subdivision', division: 'Gold', subdivision: 'Open Pit', members: 46, icon: 'subdirectory_arrow_right' },
+  ...HIGH_RISK_WORK_COMMUNITIES,
+  ...SAFETY_PRACTICE_COMMUNITIES,
 ];
 
+/** Org-level membership is derived from where a person sits (region/
+ * division/subdivision), never stored. HighRiskWork/SafetyPractice/Regional
+ * communities stay genuinely opt-in — see CurrentUser.joinedCommunityIds. */
+export function isMyCommunity(c: Community, user: CurrentUser): boolean {
+  if (c.kind === 'Org') {
+    if (c.orgLevel === 'company') return true;
+    if (c.orgLevel === 'division') return c.division === user.division;
+    if (c.orgLevel === 'subdivision') return c.subdivision === user.subdivision;
+    return false;
+  }
+  return (user.joinedCommunityIds ?? []).includes(c.id);
+}
+
 export const POSTS: Post[] = [
-  { id: 'p1', kind: 'discussion', author: 'Hiviz', avatar: 'Hv', generated: true, community: 'Hot Works', when: '3h ago', postedAgoMinutes: 180,
+  { id: 'p1', kind: 'discussion', author: 'Hiviz', avatar: 'Hv', generated: true, community: 'Hot work', when: '3h ago', postedAgoMinutes: 180,
     title: 'Spotter handovers breaking at shift change — three near-misses say the same thing',
     body: 'Across four sites in 28 days. Spotter changes at shift change without re-confirmation. The PTW technically requires confirmation at commencement — but shift change isn’t treated as recommencement.',
     replies: 4, likes: 23, files: 1, fileName: 'Spotter-handover-checklist-v2.pdf' },
-  { id: 'p5', kind: 'poll', author: 'M. Ahn', role: 'Safety Coordinator', community: 'Work at Heights', when: '5h ago', postedAgoMinutes: 300,
+  { id: 'p5', kind: 'poll', author: 'M. Ahn', role: 'Safety Coordinator', community: 'Work at heights', when: '5h ago', postedAgoMinutes: 300,
     title: 'Which anchor point layout do you use for confined roof work?',
     body: 'Comparing setups across sites before we standardise the toolbox talk.',
     pollOptions: [
@@ -22,7 +67,7 @@ export const POSTS: Post[] = [
       { label: 'Horizontal lifeline', votes: 7 },
     ],
     replies: 3, likes: 9 },
-  { id: 'p6', kind: 'briefing', author: 'Hiviz', avatar: 'Hv', community: 'Confined Space', when: '7h ago', postedAgoMinutes: 420,
+  { id: 'p6', kind: 'briefing', author: 'Hiviz', avatar: 'Hv', community: 'Confined spaces', when: '7h ago', postedAgoMinutes: 420,
     title: 'Updated confined-space entry permit — mandatory acknowledgement',
     body: 'New atmospheric testing requirement added to the PTW template. Review before your next confined-space job.',
     replies: 2, likes: 41, files: 1, fileName: 'Confined-Space-Entry-Permit-v3.pdf' },
@@ -30,19 +75,19 @@ export const POSTS: Post[] = [
     title: 'Regional heat policy update — effective this Friday',
     body: 'New minimum hydration-break intervals for NSW sites above 35°C. Site-level heat plans still apply on top of this.',
     replies: 2, likes: 22 },
-  { id: 'p8', kind: 'discussion', author: 'K. Lee', role: 'Crew Lead', community: 'PTW Practice', when: '15h ago', postedAgoMinutes: 900,
+  { id: 'p8', kind: 'discussion', author: 'K. Lee', role: 'Crew Lead', community: 'Permit to work', when: '15h ago', postedAgoMinutes: 900,
     title: 'Anyone digitised their PTW handover log yet?',
     body: 'Still running paper-based shift handovers for permits — looking at options before EOFY.',
     replies: 2, likes: 12 },
-  { id: 'p2', kind: 'discussion', author: 'P. Torres', community: 'Work at Heights', role: 'Supervisor', when: '1d ago', postedAgoMinutes: 1440,
+  { id: 'p2', kind: 'discussion', author: 'P. Torres', community: 'Work at heights', role: 'Supervisor', when: '1d ago', postedAgoMinutes: 1440,
     title: 'Split-watch setup for confined-area hot work — anyone done this?',
     body: 'Trialling a split-watch on confined-area hot work. Keen to hear how others have structured the fire-watch rotation.',
     replies: 3, likes: 11 },
-  { id: 'p3', kind: 'discussion', author: 'R. Bridges', community: 'PTW Practice', role: 'EHS Manager', when: '1d ago', postedAgoMinutes: 1460, digest: true,
+  { id: 'p3', kind: 'discussion', author: 'R. Bridges', community: 'Permit to work', role: 'EHS Manager', when: '1d ago', postedAgoMinutes: 1460, digest: true,
     title: '24-hour permit cycles in confined spaces — what does yours say?',
     body: 'Pulling together a digest on permit validity windows. Drop your site’s rule and we’ll compare.',
     replies: 31, likes: 54 },
-  { id: 'p4', kind: 'discussion', author: 'A. Muñoz', community: 'Confined Space', role: 'EHS Lead', when: '2d ago', postedAgoMinutes: 2880,
+  { id: 'p4', kind: 'discussion', author: 'A. Muñoz', community: 'Confined spaces', role: 'EHS Lead', when: '2d ago', postedAgoMinutes: 2880,
     title: 'Added a shift-change checklist to the PTW — happy to share the template',
     body: 'Re-confirm spotter boundaries at every handover. Cut our near-misses to zero last quarter.',
     replies: 6, likes: 9, files: 1, fileName: 'Shift-Change-Checklist.pdf' },

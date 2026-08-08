@@ -5,6 +5,7 @@ import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { Drawer } from '@/components';
 import { ActiveUserProvider } from '@/state/ActiveUser';
 import { PurviewScopeProvider } from '@/state/PurviewScope';
+import { CommunityScopeProvider } from '@/state/CommunityScope';
 import { insightsFitToHeight, type InsightsView } from '@/views/insights/insightsLayout';
 import { Sidebar } from './Sidebar';
 import { Topbar } from './Topbar';
@@ -30,24 +31,26 @@ export function AppShell() {
   return (
     <ActiveUserProvider>
       <PurviewScopeProvider>
-        <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: colors.bg }}>
-          {breakpoint !== 'mobile' && <Sidebar collapsed={breakpoint === 'tablet'} />}
-          {breakpoint === 'mobile' && (
-            <Drawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} width={244} fullScreenOnMobile={false} side="left">
-              <Sidebar onNavigate={() => setMobileNavOpen(false)} />
-            </Drawer>
-          )}
+        <CommunityScopeProvider>
+          <div style={{ display: 'flex', height: '100vh', width: '100%', overflow: 'hidden', background: colors.bg }}>
+            {breakpoint !== 'mobile' && <Sidebar collapsed={breakpoint === 'tablet'} />}
+            {breakpoint === 'mobile' && (
+              <Drawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} width={244} fullScreenOnMobile={false} side="left">
+                <Sidebar onNavigate={() => setMobileNavOpen(false)} />
+              </Drawer>
+            )}
 
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
-            <Topbar breakpoint={breakpoint} onMenuClick={() => setMobileNavOpen(true)} />
-            <PurviewBanner />
-            <div ref={scrollRef} className="a-scroll" style={{ flex: 1, overflowY: 'auto', padding: breakpoint === 'mobile' ? '18px 16px 40px' : '28px 32px 56px' }}>
-              <div style={{ maxWidth: 1280, margin: '0 auto', height: fitToHeight ? '100%' : undefined }}>
-                <Outlet />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', minWidth: 0, height: '100%' }}>
+              <Topbar breakpoint={breakpoint} onMenuClick={() => setMobileNavOpen(true)} />
+              <PurviewBanner />
+              <div ref={scrollRef} className="a-scroll" style={{ flex: 1, overflowY: 'auto', padding: breakpoint === 'mobile' ? '18px 16px 40px' : '28px 32px 56px' }}>
+                <div style={{ maxWidth: 1280, margin: '0 auto', height: fitToHeight ? '100%' : undefined }}>
+                  <Outlet />
+                </div>
               </div>
             </div>
           </div>
-        </div>
+        </CommunityScopeProvider>
       </PurviewScopeProvider>
     </ActiveUserProvider>
   );

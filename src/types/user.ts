@@ -33,6 +33,16 @@ export interface CurrentUser {
   region?: string;
   /** Home division purview. Undefined means no division pin — most regional managers don't have one. */
   division?: string;
+  /** Home subdivision, when this person's division is further pinned to one
+   * of its subdivisions (see data/divisions.ts SUBDIVISIONS). Undefined for
+   * anyone without a division pin, or division-wide roles within one.
+   * Drives which org-level Community they're auto-associated with in
+   * Communities — see isMyCommunity in data/communities.ts. */
+  subdivision?: string;
+  /** Practice communities (ad-hoc, opt-in — unlike org-level communities,
+   * which are auto-derived from region/division/subdivision) this person
+   * has joined. See isMyCommunity in data/communities.ts. */
+  joinedCommunityIds?: string[];
   email: string;
   /** Additive — grants access to the Admin workspace on top of whatever
    * region/division purview this person already has. Not the same axis as

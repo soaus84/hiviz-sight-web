@@ -4,15 +4,16 @@ import { PageHead, Tabs } from '@/components';
 import { WORKSITE_TYPES, HIGH_RISK_WORK, SAFETY_PRACTICES } from '@/data/admin/taxonomies';
 import { addTag, updateTag, removeTag } from '@/data/admin/company';
 import { TagList } from './TagList';
+import { WORKSITE_TYPE_ICONS, HIGH_RISK_WORK_ICONS, SAFETY_PRACTICE_ICONS } from './IconPicker';
 import type { TagRecord } from '@/types';
 
 type TaxonomyTab = 'worksiteType' | 'highRiskWork' | 'safetyPractice';
 const VALID_TABS: TaxonomyTab[] = ['worksiteType', 'highRiskWork', 'safetyPractice'];
 
-const LISTS: Record<TaxonomyTab, { list: TagRecord[]; idPrefix: string; noun: string }> = {
-  worksiteType: { list: WORKSITE_TYPES, idPrefix: 'wt', noun: 'worksite type' },
-  highRiskWork: { list: HIGH_RISK_WORK, idPrefix: 'hrw', noun: 'high-risk work type' },
-  safetyPractice: { list: SAFETY_PRACTICES, idPrefix: 'sp', noun: 'safety practice' },
+const LISTS: Record<TaxonomyTab, { list: TagRecord[]; idPrefix: string; noun: string; iconOptions: string[] }> = {
+  worksiteType: { list: WORKSITE_TYPES, idPrefix: 'wt', noun: 'worksite type', iconOptions: WORKSITE_TYPE_ICONS },
+  highRiskWork: { list: HIGH_RISK_WORK, idPrefix: 'hrw', noun: 'high-risk work type', iconOptions: HIGH_RISK_WORK_ICONS },
+  safetyPractice: { list: SAFETY_PRACTICES, idPrefix: 'sp', noun: 'safety practice', iconOptions: SAFETY_PRACTICE_ICONS },
 };
 
 /** Just tags used to help classify/direct things elsewhere — not wired into
@@ -27,7 +28,7 @@ export function AdminTaxonomies() {
   const [, bump] = useState(0);
   const refresh = () => bump((n) => n + 1);
 
-  const { list, idPrefix, noun } = LISTS[tab];
+  const { list, idPrefix, noun, iconOptions } = LISTS[tab];
 
   return (
     <div>
@@ -45,8 +46,9 @@ export function AdminTaxonomies() {
         <TagList
           noun={noun}
           items={list}
-          onAdd={(name, description) => { addTag(list, idPrefix, name, description); refresh(); }}
-          onUpdate={(id, name, description) => { updateTag(list, id, name, description); refresh(); }}
+          iconOptions={iconOptions}
+          onAdd={(name, description, _parentId, icon) => { addTag(list, idPrefix, name, description, undefined, icon); refresh(); }}
+          onUpdate={(id, name, description, _parentId, icon) => { updateTag(list, id, name, description, undefined, icon); refresh(); }}
           onDelete={(id) => { removeTag(list, id); refresh(); }}
         />
       </div>
