@@ -2,8 +2,8 @@ import { HIGH_RISK_WORK, SAFETY_PRACTICES } from './admin/taxonomies';
 import type { Community, CurrentUser, Post, PollOption, PostKind, ThreadExtra } from '@/types';
 
 // Stable, deterministic flavour number — not meant to mean anything beyond
-// "looks like a real member count," same as the hand-authored Org/Regional
-// entries below.
+// "looks like a real member count," same as the hand-authored Org entries
+// below.
 function pseudoMemberCount(seed: string): number {
   let hash = 0;
   for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) % 1000;
@@ -23,7 +23,6 @@ const SAFETY_PRACTICE_COMMUNITIES: Community[] = SAFETY_PRACTICES.map((t) => ({
 }));
 
 export const COMMUNITIES: Community[] = [
-  { id: 'c5', name: 'NSW Operations', kind: 'Regional', members: 34, icon: 'apartment' },
   // Org-level — one per Company/Division/Subdivision tier, mirroring the
   // purview model exactly (see data/divisions.ts). Membership is computed
   // by isMyCommunity below, not stored — nobody "joins" their own division.
@@ -41,7 +40,7 @@ export const COMMUNITIES: Community[] = [
 ];
 
 /** Org-level membership is derived from where a person sits (region/
- * division/subdivision), never stored. HighRiskWork/SafetyPractice/Regional
+ * division/subdivision), never stored. HighRiskWork/SafetyPractice
  * communities stay genuinely opt-in — see CurrentUser.joinedCommunityIds. */
 export function isMyCommunity(c: Community, user: CurrentUser): boolean {
   if (c.kind === 'Org') {
@@ -71,10 +70,6 @@ export const POSTS: Post[] = [
     title: 'Updated confined-space entry permit — mandatory acknowledgement',
     body: 'New atmospheric testing requirement added to the PTW template. Review before your next confined-space job.',
     replies: 2, likes: 41, files: 1, fileName: 'Confined-Space-Entry-Permit-v3.pdf' },
-  { id: 'p7', kind: 'briefing', author: 'Hiviz', avatar: 'Hv', community: 'NSW Operations', when: '1h ago', postedAgoMinutes: 60,
-    title: 'Regional heat policy update — effective this Friday',
-    body: 'New minimum hydration-break intervals for NSW sites above 35°C. Site-level heat plans still apply on top of this.',
-    replies: 2, likes: 22 },
   { id: 'p8', kind: 'discussion', author: 'K. Lee', role: 'Crew Lead', community: 'Permit to work', when: '15h ago', postedAgoMinutes: 900,
     title: 'Anyone digitised their PTW handover log yet?',
     body: 'Still running paper-based shift handovers for permits — looking at options before EOFY.',
@@ -114,12 +109,6 @@ export const THREADS: Record<string, ThreadExtra> = {
     replies: [
       { name: 'M. Okafor', role: 'Crew Lead · Jewell', when: '5h ago', text: 'Does the new atmospheric test apply retroactively to permits issued this week?', likes: 3 },
       { name: 'A. Muñoz', role: 'EHS Lead · Perth', when: '4h ago', text: 'Yes — supervisors are re-testing anything still open past today.', likes: 5 },
-    ],
-  },
-  p7: {
-    replies: [
-      { name: 'J. Liang', role: 'Supervisor · Coolinga', when: '40m ago', text: 'Does this override the site-level heat plan or sit alongside it?', likes: 2 },
-      { name: 'Hiviz', role: 'Regional EHS', when: '25m ago', text: 'Alongside — site plans still apply, this sets the regional minimum.', likes: 6 },
     ],
   },
   p8: {

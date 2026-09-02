@@ -12,15 +12,13 @@ const KIND_LABEL: Record<CommunityKind, string> = {
   Org: 'Org communities',
   HighRiskWork: 'High-risk work communities',
   SafetyPractice: 'Safety practice communities',
-  Regional: 'Regional communities',
 };
 const KIND_SHORT_LABEL: Record<CommunityKind, string> = {
   Org: 'Org',
   HighRiskWork: 'High-risk work',
   SafetyPractice: 'Safety practice',
-  Regional: 'Regional',
 };
-const KINDS: CommunityKind[] = ['Org', 'HighRiskWork', 'SafetyPractice', 'Regional'];
+const KINDS: CommunityKind[] = ['Org', 'HighRiskWork', 'SafetyPractice'];
 
 export function MyCommunities() {
   const navigate = useNavigate();
