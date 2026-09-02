@@ -15,8 +15,8 @@ export interface Drilldown {
 /**
  * Purely a function of the current path — no "which workspace did I come
  * from" state to track. Whichever workspace eventually links into a site
- * (Insights today, maybe an Incidents workspace later), the sidebar drops
- * into this same contextual nav, and reverts the moment the path moves on.
+ * (Insights, Incident, or Risk), the sidebar drops into this same
+ * contextual nav, and reverts the moment the path moves on.
  */
 export function getDrilldown(pathname: string): Drilldown | null {
   const match = pathname.match(/^\/sites\/([^/]+)/);
@@ -32,6 +32,8 @@ export function getDrilldown(pathname: string): Drilldown | null {
     nav: [
       { path: base, label: 'Overview', icon: 'summarize' },
       { path: `${base}/insights`, label: 'Insights', icon: 'lightbulb' },
+      { path: `${base}/incidents`, label: 'Incidents', icon: 'report' },
+      { path: `${base}/controls`, label: 'Controls', icon: 'verified' },
       { path: `${base}/visits`, label: 'Visits', icon: 'calendar_today' },
       { path: `${base}/observations`, label: 'Observations', icon: 'visibility' },
       { path: `${base}/contacts`, label: 'Contacts', icon: 'contacts' },

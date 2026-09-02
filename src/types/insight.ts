@@ -77,7 +77,13 @@ export interface Insight {
   updated: string;
   updatedAt: string;
   cause?: string;
-  /** Human-approval flag — true once routed for crew-facing action, never auto-set. */
+  /** Human-approval flag — true once routed for crew-facing action. Auto-set
+   * only for insights entering via the Incident workspace's systemic cause
+   * bridge (data/investigations.ts's flagSystemicCause) — per
+   * specs/features/INVESTIGATION.md Stage 3, that trigger source skips the
+   * AI-draft/review gate entirely since a safety manager already authored
+   * and confirmed the content. Every other insight requires a real review
+   * action before this flips true. */
   cleared_for_toolbox: boolean;
   owner?: string;
 

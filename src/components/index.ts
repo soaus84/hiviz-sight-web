@@ -20,3 +20,4 @@ export * from './drawer/Drawer';
 export * from './meter/Meter';
 export * from './signal-mix/SignalMix';
 export * from './toggle/Toggle';
+export * from './info-tip/InfoTip';

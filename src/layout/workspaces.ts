@@ -8,7 +8,7 @@ export interface NavItem {
   badge?: () => number | undefined;
 }
 
-export type WorkspaceId = 'insights' | 'communities' | 'admin';
+export type WorkspaceId = 'insights' | 'incident' | 'risk' | 'communities' | 'admin';
 
 export interface Workspace {
   id: WorkspaceId;
@@ -36,6 +36,33 @@ export const WORKSPACES: Workspace[] = [
       { path: '/observations', label: 'Observations', icon: 'visibility' },
       { path: '/leaders', label: 'Leaders', icon: 'shield_person' },
       { path: '/sites', label: 'Sites', icon: 'location_on' },
+    ],
+  },
+  {
+    id: 'incident',
+    label: 'Incident',
+    icon: 'report',
+    description: 'Incidents, investigations & sites',
+    home: '/incidents/dashboard',
+    nav: [
+      { path: '/incidents/dashboard', label: 'Dashboard', icon: 'grid_view' },
+      { path: '/investigations', label: 'Investigations', icon: 'search' },
+      { path: '/incidents', label: 'Incidents', icon: 'report' },
+      { path: '/incidents/sites', label: 'Sites', icon: 'location_on' },
+    ],
+  },
+  {
+    id: 'risk',
+    label: 'Risk',
+    icon: 'shield',
+    description: 'Work types, barrier failures & sites',
+    home: '/risk/dashboard',
+    nav: [
+      { path: '/risk/dashboard', label: 'Dashboard', icon: 'grid_view' },
+      { path: '/risk/barrier-failures', label: 'Barrier Failures', icon: 'gpp_bad' },
+      { path: '/risk/work-types', label: 'Work Types', icon: 'engineering' },
+      { path: '/risk/register', label: 'Register', icon: 'list_alt' },
+      { path: '/risk/sites', label: 'Sites', icon: 'location_on' },
     ],
   },
   {

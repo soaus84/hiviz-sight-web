@@ -25,6 +25,17 @@ export interface Site {
   lastVisitDays: number;
   openInsightsCount: number;
   observationsCount: number;
+  openIncidentsCount: number;
+  severeIncidentsCount: number;
+  lastIncident?: string;
+  lastIncidentDays?: number;
+  /** Ids into data/admin/taxonomies.ts's HIGH_RISK_WORK — which work types
+   * run at this site. Drives Risk workspace control targeting: a pushed
+   * control reaches every site whose hazard's work type appears here. */
+  workTypeIds: string[];
+  openBarrierFailuresCount: number;
+  /** WorksiteControls pushed to this site awaiting accept/modify/reject. */
+  pendingControlsCount: number;
   atrophyScore: number | null;
   status: string;
   live?: boolean;

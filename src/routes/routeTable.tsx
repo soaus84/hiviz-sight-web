@@ -10,8 +10,21 @@ import { SiteObservations } from '@/views/sites/SiteObservations';
 import { SiteVisits } from '@/views/sites/SiteVisits';
 import { SiteContacts } from '@/views/sites/SiteContacts';
 import { SiteInsights } from '@/views/sites/SiteInsights';
+import { SiteIncidents } from '@/views/sites/SiteIncidents';
+import { SiteControls } from '@/views/sites/SiteControls';
 import { Observations } from '@/views/observations/Observations';
 import { Insights } from '@/views/insights/Insights';
+import { Incidents } from '@/views/incidents/Incidents';
+import { Investigations } from '@/views/incidents/Investigations';
+import { IncidentSites } from '@/views/incidents/IncidentSites';
+import { IncidentDashboard } from '@/views/incidents/IncidentDashboard';
+import { RiskDashboard } from '@/views/risk/RiskDashboard';
+import { BarrierFailures } from '@/views/risk/BarrierFailures';
+import { WorkTypes } from '@/views/risk/WorkTypes';
+import { WorkTypeDetail } from '@/views/risk/WorkTypeDetail';
+import { Register } from '@/views/risk/Register';
+import { HazardDetail } from '@/views/risk/HazardDetail';
+import { RiskSites } from '@/views/risk/RiskSites';
 import { Leaders } from '@/views/leaders/Leaders';
 import { Feed } from '@/views/communities/Feed';
 import { MyCommunities } from '@/views/communities/MyCommunities';
@@ -45,9 +58,24 @@ export const routes = [
       { path: 'sites/:id/visits', element: <SiteVisits /> },
       { path: 'sites/:id/contacts', element: <SiteContacts /> },
       { path: 'sites/:id/insights', element: <SiteInsights /> },
+      { path: 'sites/:id/incidents', element: <SiteIncidents /> },
+      { path: 'sites/:id/controls', element: <SiteControls /> },
       { path: 'observations', element: <Observations /> },
       { path: 'insights', element: <Insights /> },
       { path: 'insights/:id', element: <Insights /> },
+      { path: 'incidents', element: <Incidents /> },
+      { path: 'investigations', element: <Investigations /> },
+      { path: 'investigations/:id', element: <Investigations /> },
+      { path: 'incidents/sites', element: <IncidentSites /> },
+      { path: 'incidents/dashboard', element: <IncidentDashboard /> },
+      { path: 'risk/dashboard', element: <RiskDashboard /> },
+      { path: 'risk/barrier-failures', element: <BarrierFailures /> },
+      { path: 'risk/barrier-failures/:id', element: <BarrierFailures /> },
+      { path: 'risk/work-types', element: <WorkTypes /> },
+      { path: 'risk/work-types/:id', element: <WorkTypeDetail /> },
+      { path: 'risk/register', element: <Register /> },
+      { path: 'risk/register/:id', element: <HazardDetail /> },
+      { path: 'risk/sites', element: <RiskSites /> },
       { path: 'leaders', element: <Leaders /> },
       { path: 'communities', element: <Feed /> },
       { path: 'communities/mine', element: <MyCommunities /> },

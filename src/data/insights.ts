@@ -98,6 +98,18 @@ export const INSIGHTS: Insight[] = [
 
 export const INSIGHTS_BY_ID: Record<string, Insight> = Object.fromEntries(INSIGHTS.map((i) => [i.id, i]));
 
+/** Appends a fully-formed Insight to the shared pool and indexes it —
+ * the entry point for the Incident workspace's systemic cause bridge
+ * (specs/features/INVESTIGATION.md Stage 3: a closed investigation's
+ * findings entering the insight pipeline via trigger_source =
+ * 'external_investigation'). Distinct from the status-transition mutators
+ * below, which all operate on an insight already in INSIGHTS. */
+export function pushExternalInsight(insight: Insight): Insight {
+  INSIGHTS.push(insight);
+  INSIGHTS_BY_ID[insight.id] = insight;
+  return insight;
+}
+
 function replaceInsight(id: string, patch: Partial<Insight>): Insight | null {
   const idx = INSIGHTS.findIndex((i) => i.id === id);
   if (idx === -1) return null;

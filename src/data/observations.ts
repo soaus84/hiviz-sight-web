@@ -62,3 +62,13 @@ export const OBSERVATIONS: Observation[] = [
 export function energyLabel(e: EnergyType): string {
   return e === 'none' ? 'Procedural' : e[0].toUpperCase() + e.slice(1);
 }
+
+/** Appends a fully-formed Observation to the shared pool — the entry point
+ * for the Risk workspace's SLA-escalation bridge (data/barrierFailures.ts's
+ * escalateToInsightPipeline, specs/features/RISK-CONTROLS.md §6.4), the
+ * third instance of the same cross-workspace-bridge pattern as
+ * data/insights.ts's pushExternalInsight. */
+export function pushExternalObservation(observation: Observation): Observation {
+  OBSERVATIONS.push(observation);
+  return observation;
+}
