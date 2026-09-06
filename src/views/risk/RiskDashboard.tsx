@@ -2,7 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { PageHead, Stat, Card, Eyebrow, Meter, Icon, InfoTip } from '@/components';
 import { SITES } from '@/data/sites';
-import { HAZARDS, CRITICAL_CONTROLS, WORKSITE_CONTROLS, computeWorkTypeRisk } from '@/data/risk';
+import { HAZARDS, CRITICAL_CONTROLS, WORKSITE_CONTROLS, computeWorkTypeRisk, RATING_RANK } from '@/data/risk';
 import { BARRIER_FAILURES, barrierFailureInRegion } from '@/data/barrierFailures';
 import { HIGH_RISK_WORK } from '@/data/admin/taxonomies';
 import { inPurview, purviewLabel, purviewPhrase } from '@/data/purview';
@@ -10,9 +10,6 @@ import { usePurviewScope } from '@/state/PurviewScope';
 import { AttnRow } from '@/views/shared/AttnRow';
 import { SEVERITY_DISPLAY, LIKELIHOOD_DISPLAY } from './riskDisplay';
 import { RiskRatingInfo } from './RiskRatingInfo';
-import type { SeverityClass } from '@/types';
-
-const RATING_RANK: Record<SeverityClass, number> = { minor: 0, moderate: 1, serious: 2, critical: 3 };
 
 export function RiskDashboard() {
   const navigate = useNavigate();
@@ -24,7 +21,7 @@ export function RiskDashboard() {
   const controlsAtSites = WORKSITE_CONTROLS.filter((wc) => sites.some((s) => s.id === wc.siteId));
 
   const open = failures.filter((b) => b.status === 'open');
-  const pendingApproval = failures.filter((b) => b.status === 'pending_approval');
+  const inReview = failures.filter((b) => b.status === 'review');
   const sitesWithPending = sites.filter((s) => s.pendingControlsCount > 0);
   const activeControls = controlsAtSites.filter((wc) => wc.status === 'active');
   const workTypesWithHazards = HIGH_RISK_WORK.filter((t) => HAZARDS.some((h) => h.workTypeId === t.id));
@@ -43,7 +40,7 @@ export function RiskDashboard() {
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Stat label="Open barrier failures" value={open.length} icon="gpp_bad" />
-        <Stat label="Pending approval" value={pendingApproval.length} icon="fact_check" />
+        <Stat label="In review" value={inReview.length} icon="fact_check" />
         <Stat label="Sites with pending controls" value={sitesWithPending.length} unit={`of ${sites.length}`} icon="domain" />
         <Stat label="Active controls" value={activeControls.length} icon="verified" />
       </div>
@@ -52,13 +49,13 @@ export function RiskDashboard() {
         <Eyebrow right={<span onClick={() => navigate('/risk/barrier-failures')} style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: colors.ink, textDecoration: 'underline' }}>View all</span>}>
           Needs your attention
         </Eyebrow>
-        {[...open, ...pendingApproval].map((b, i, arr) => {
+        {[...open, ...inReview].map((b, i, arr) => {
           const severity = SEVERITY_DISPLAY[b.severityClass];
           return (
             <AttnRow key={b.id} label={severity.label} tone={severity.tone} title={b.controlName} meta={`${b.siteName} · ${b.hazardName}`} onClick={() => navigate(`/risk/barrier-failures/${b.id}`)} last={i === arr.length - 1} />
           );
         })}
-        {open.length === 0 && pendingApproval.length === 0 && (
+        {open.length === 0 && inReview.length === 0 && (
           <div style={{ padding: '20px 4px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>Nothing needs attention in {purviewPhrase(region, division)} right now.</div>
         )}
       </Card>

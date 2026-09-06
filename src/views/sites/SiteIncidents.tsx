@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { Pills, Search, DataTable, Badge, Drawer, type Column } from '@/components';
 import { SiteHeader } from './SiteHeader';
 import { SITES } from '@/data/sites';
@@ -47,6 +48,7 @@ export function SiteIncidents() {
       .filter((i) => !query || i.description.toLowerCase().includes(query.toLowerCase())),
     [s.id, status, query],
   );
+  useListKeyNav(rows, selId, openIncident);
 
   const cols: Column<Incident>[] = [
     { key: 'id', label: 'ID', w: 96, mono: true, render: (r) => <span style={{ color: colors.inkSoft, fontWeight: 700 }}>{r.id}</span> },

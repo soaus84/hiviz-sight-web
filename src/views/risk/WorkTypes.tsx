@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Search, DataTable, Badge, Icon, InfoTip, type Column } from '@/components';
+import { PageHead, Pills, Search, DataTable, Badge, Icon, InfoTip, type Column } from '@/components';
 import { HAZARDS, workTypeIdForBarrierFailure, computeWorkTypeRisk } from '@/data/risk';
 import { BARRIER_FAILURES } from '@/data/barrierFailures';
 import { SITES } from '@/data/sites';
@@ -27,6 +27,7 @@ interface WorkTypeRow {
  * view over the same underlying Hazard/CriticalControl data. */
 export function WorkTypes() {
   const navigate = useNavigate();
+  const [filter, setFilter] = useState('all');
   const [query, setQuery] = useState('');
 
   const rows: WorkTypeRow[] = useMemo(() => {
@@ -44,7 +45,9 @@ export function WorkTypes() {
     });
   }, []);
 
-  const filtered = rows.filter((r) => !query || r.name.toLowerCase().includes(query.toLowerCase()));
+  const filtered = rows
+    .filter((r) => filter === 'all' || (filter === 'unassessed' && r.hazardCount === 0))
+    .filter((r) => !query || r.name.toLowerCase().includes(query.toLowerCase()));
 
   const cols: Column<WorkTypeRow>[] = [
     { key: 'name', label: 'Work type', render: (r) => (
@@ -55,7 +58,7 @@ export function WorkTypes() {
         <span style={{ fontWeight: 700, fontSize: 14 }}>{r.name}</span>
       </div>
     ) },
-    { key: 'rating', label: 'Risk rating', w: 140, render: (r) => r.rating ? <Badge tone={SEVERITY_DISPLAY[r.rating].tone}>{SEVERITY_DISPLAY[r.rating].label}</Badge> : <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: colors.inkMuted }}>No hazards yet</span> },
+    { key: 'rating', label: 'Risk rating', w: 140, render: (r) => r.rating ? <Badge tone={SEVERITY_DISPLAY[r.rating].tone}>{SEVERITY_DISPLAY[r.rating].label}</Badge> : <Badge tone="error" outline icon="priority_high">Not assessed</Badge> },
     { key: 'hazardCount', label: 'Hazards', w: 90, align: 'left', mono: true, render: (r) => <span style={{ fontWeight: 700 }}>{r.hazardCount}</span> },
     { key: 'siteCount', label: 'Sites doing this work', w: 160, mono: true, render: (r) => <span style={{ color: colors.inkSoft }}>{r.siteCount}</span> },
     { key: 'openFailures', label: 'Open barrier failures', w: 160, render: (r) => r.openFailures > 0 ? <Badge tone="warning">{r.openFailures}</Badge> : <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, color: colors.inkMuted }}>None</span> },
@@ -72,6 +75,16 @@ export function WorkTypes() {
           <Search placeholder="Search work types" width={260} value={query} onChange={setQuery} />
         </>}
       />
+      <div style={{ marginBottom: 16 }}>
+        <Pills
+          value={filter}
+          onChange={setFilter}
+          items={[
+            { k: 'all', label: 'All', n: rows.length },
+            { k: 'unassessed', label: 'Not assessed', n: rows.filter((r) => r.hazardCount === 0).length },
+          ]}
+        />
+      </div>
       <DataTable columns={cols} rows={filtered} rowKey="id" onRow={(r) => navigate(`/risk/work-types/${r.id}`)} empty="No work types match this search." />
     </div>
   );

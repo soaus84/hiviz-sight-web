@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { PageHead, Tabs, Btn, IconBtn, LinkBtn, Drawer } from '@/components';
 import { INVESTIGATIONS, INVESTIGATIONS_BY_ID, investigationInRegion } from '@/data/investigations';
 import { INCIDENTS, INCIDENTS_BY_ID, incidentInRegion } from '@/data/incidents';
@@ -14,6 +15,7 @@ import { SevereIncidentCard } from './SevereIncidentCard';
 import { InvestigationsBoard } from './InvestigationsBoard';
 import { IncidentDetail } from './IncidentDetail';
 import { insightsFitToHeight, type InsightsView } from '@/views/insights/insightsLayout';
+import type { Incident, Investigation } from '@/types';
 
 // Three pipeline stages — the first ('review') is severe Incidents awaiting
 // the Acknowledge/Progress decision, the other two are real Investigation
@@ -26,7 +28,18 @@ function isPipelineTab(v: string | null): v is PipelineTab {
   return !!v && (VALID_TABS as string[]).includes(v);
 }
 
-export function Investigations() {
+export interface InvestigationsProps {
+  /** Pre-filtered row overrides — used by MyInvestigations.tsx to reuse
+   * this exact page (tabs, board/list toggle, detail panels, every action)
+   * scoped to one person instead of the whole purview. Everything below
+   * this line is unchanged either way. All three or none — a partial
+   * override would leave the tab counts telling two different stories. */
+  rows?: { severeIncidents: Incident[]; openInvestigations: Investigation[]; closedInvestigations: Investigation[] };
+  title?: string;
+  sub?: string;
+}
+
+export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -57,9 +70,9 @@ export function Investigations() {
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Not memoized — both stores mutate in place, same reasoning as Insights.tsx.
-  const severeIncidents = INCIDENTS.filter((i) => i.status === 'severe' && incidentInRegion(i, { region, division }));
-  const openInvestigations = INVESTIGATIONS.filter((v) => v.status === 'open' && investigationInRegion(v, { region, division }));
-  const closedInvestigations = INVESTIGATIONS.filter((v) => v.status === 'closed' && investigationInRegion(v, { region, division }));
+  const severeIncidents = rows?.severeIncidents ?? INCIDENTS.filter((i) => i.status === 'severe' && incidentInRegion(i, { region, division }));
+  const openInvestigations = rows?.openInvestigations ?? INVESTIGATIONS.filter((v) => v.status === 'open' && investigationInRegion(v, { region, division }));
+  const closedInvestigations = rows?.closedInvestigations ?? INVESTIGATIONS.filter((v) => v.status === 'closed' && investigationInRegion(v, { region, division }));
 
   const counts = { review: severeIncidents.length, open: openInvestigations.length, closed: closedInvestigations.length };
   const list: { id: string }[] = tab === 'review' ? severeIncidents : tab === 'open' ? openInvestigations : closedInvestigations;
@@ -82,6 +95,7 @@ export function Investigations() {
     setSelId(itemId);
     navigate(`/investigations/${itemId}`, { replace: true });
   };
+  useListKeyNav(list, selId, selectItem, view === 'list');
 
   // Fired after a severe incident is acknowledged or progressed. Progressing
   // creates a real Investigation and links the incident to it — follow the
@@ -144,8 +158,8 @@ export function Investigations() {
       ) : (
         <>
           <PageHead
-            title="Investigations"
-            sub={`Severe incidents awaiting review, through to closed investigations, in ${purviewPhrase(region, division)}.`}
+            title={title ?? 'Investigations'}
+            sub={sub ?? `Severe incidents awaiting review, through to closed investigations, in ${purviewPhrase(region, division)}.`}
             actions={
               <>
                 <IconBtn name="view_list" active={view === 'list'} onClick={() => setView('list')} />

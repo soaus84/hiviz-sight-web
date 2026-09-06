@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { Pills, Search, DataTable, Badge, Drawer, type Column } from '@/components';
 import { SiteHeader } from './SiteHeader';
 import { SITES } from '@/data/sites';
@@ -46,6 +47,7 @@ export function SiteObservations() {
       .filter((o) => !query || o.summary.toLowerCase().includes(query.toLowerCase())),
     [s.id, signal, query],
   );
+  useListKeyNav(rows, selId, openObs);
 
   const cols: Column<Observation>[] = [
     { key: 'id', label: 'ID', w: 96, mono: true, render: (r) => <span style={{ color: colors.inkSoft, fontWeight: 700 }}>{r.id}</span> },

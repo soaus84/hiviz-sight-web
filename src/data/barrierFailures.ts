@@ -1,7 +1,6 @@
-import type { BarrierFailure, Observation, SeverityClass } from '@/types';
+import type { BarrierFailure, SeverityClass } from '@/types';
 import { SITES_BY_ID, SITE_ID_BY_NAME } from './sites';
 import { inPurview, type PurviewFilter } from './purview';
-import { pushExternalObservation } from './observations';
 
 // Reconciliation with Hiviz roadmap v1/specs/features/RISK-CONTROLS.md — see
 // data/risk.ts for the register-side notes. On the barrier failure side:
@@ -15,20 +14,30 @@ import { pushExternalObservation } from './observations';
 //   already established for Incident's auto-severe criterion, on purpose —
 //   the same "severity crosses a line -> needs a decision-maker above the
 //   field" rule, not a new one invented for Risk.
-// - escalateToInsightPipeline below is a real implementation of §6.4's
-//   SLA-breach escalation — it pushes a genuine barrier_failure Observation
-//   into the shared OBSERVATIONS pool. Manually triggered here (no
-//   background clock in a static mock), same simplification already applied
-//   to the Incident workspace's systemic cause bridge.
+// - §6.4's SLA-breach escalation (a manual "push this one to Insight" action)
+//   was deliberately removed, not just left unbuilt — a single barrier
+//   failure sitting past SLA isn't itself a pattern. The right home for
+//   that signal is algorithmic: data/risk.ts's computeWorkTypeRisk already
+//   aggregates barrier-failure + incident history into a risk rating; a
+//   real systemic-pattern Insight should eventually be sourced from that
+//   crossing a threshold, not from a person manually flagging one record.
+// - The manager-facing surface (Focus's "Critical Barrier Failures") only
+//   ever shows `review` status — see data/myWorkspace.ts's stocktake note.
+//   `open` and `returned` are both the site's turn, not the manager's.
 
-const MOCK_NOW = new Date('2025-05-07T10:00:00');
-
-function requiresApproval(severityClass: SeverityClass): boolean {
+// Exported — data/stopWork.ts reuses this exact rule for its own resume
+// gate, on purpose: same "severity crosses a line -> needs a decision-maker
+// above the field" threshold, not a fourth version of it.
+export function requiresApproval(severityClass: SeverityClass): boolean {
   return severityClass === 'serious' || severityClass === 'critical';
 }
 
 function site(name: string) {
   return SITES_BY_ID[SITE_ID_BY_NAME[name]];
+}
+
+export function formatWhen(iso: string): string {
+  return new Date(iso).toLocaleString(undefined, { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
 }
 
 export const BARRIER_FAILURES: BarrierFailure[] = [
@@ -39,6 +48,7 @@ export const BARRIER_FAILURES: BarrierFailure[] = [
     flaggedBy: 'James Morrow', when: '3d ago', flaggedAt: '2025-05-04T15:00:00',
     notes: 'Two impact wrenches left on the workshop bench overnight instead of the tool cage.',
     status: 'resolved', resolutionNote: 'Equipment returned to the tool cage and crew reminded at toolbox talk.', resolvedBy: 'James Morrow',
+    rounds: [{ kind: 'submitted', by: 'James Morrow', at: '2025-05-04T16:00:00', note: 'Equipment returned to the tool cage and crew reminded at toolbox talk.' }],
   },
   {
     id: 'BF-102', worksiteControlId: 'wc12', siteId: site('Jewell Crusher').id, siteName: 'Jewell Crusher',
@@ -46,7 +56,8 @@ export const BARRIER_FAILURES: BarrierFailure[] = [
     severityClass: 'critical', energyType: 'kinetic', requiresApproval: requiresApproval('critical'),
     flaggedBy: 'Marcus Okafor', when: '2d ago', flaggedAt: '2025-05-05T09:20:00',
     notes: 'Spotter left position mid-shift to answer a radio call — reversing continued for roughly 10 minutes before it was caught.',
-    status: 'open',
+    status: 'open', rounds: [],
+    stopWorkWarranted: true, stopWorkWarrantedRationale: 'Spotter absent while reversing continued — a live struck-by exposure, not yet contained.', stopWorkCalled: false,
   },
   {
     id: 'BF-103', worksiteControlId: 'wc9', siteId: site('Coolinga Plant').id, siteName: 'Coolinga Plant',
@@ -54,7 +65,8 @@ export const BARRIER_FAILURES: BarrierFailure[] = [
     severityClass: 'critical', energyType: 'thermal', requiresApproval: requiresApproval('critical'),
     flaggedBy: 'Jess Liang', when: 'Yesterday', flaggedAt: '2025-05-06T14:00:00',
     notes: 'Fire watch stepped away during a fuel bay hot work task to help with an unrelated task.',
-    status: 'pending_approval', resolutionNote: 'Fire watch retrained on the requirement and repositioned; PTW re-briefed to the whole crew before work resumed.', resolvedBy: 'Jess Liang',
+    status: 'review', resolutionNote: 'Fire watch retrained on the requirement and repositioned; PTW re-briefed to the whole crew before work resumed.', resolvedBy: 'Jess Liang',
+    rounds: [{ kind: 'submitted', by: 'Jess Liang', at: '2025-05-06T14:30:00', note: 'Fire watch retrained on the requirement and repositioned; PTW re-briefed to the whole crew before work resumed.' }],
   },
   {
     id: 'BF-104', worksiteControlId: 'wc10', siteId: site('Coolinga Plant').id, siteName: 'Coolinga Plant',
@@ -62,7 +74,15 @@ export const BARRIER_FAILURES: BarrierFailure[] = [
     severityClass: 'serious', energyType: 'gravitational', requiresApproval: requiresApproval('serious'),
     flaggedBy: 'Jess Liang', when: '3w ago', flaggedAt: '2025-04-16T09:00:00',
     notes: 'Anchor point inspection tag had expired — no record of re-certification.',
-    status: 'resolved', resolutionNote: 'Anchor point re-certified and inspection tag renewed.', resolvedBy: 'R. Bridges',
+    // Demonstrates the loop: submitted once, sent back with a specific
+    // direction (not rejected outright — a real "this, plus one more thing"
+    // case, per the exact scenario that prompted adding `returned`), now
+    // sitting with the site again, not a fresh manager decision.
+    status: 'returned', resolutionNote: 'Anchor point re-certified and inspection tag renewed.', resolvedBy: 'R. Bridges',
+    rounds: [
+      { kind: 'submitted', by: 'R. Bridges', at: '2025-04-16T11:00:00', note: 'Anchor point re-certified and inspection tag renewed.' },
+      { kind: 'returned', by: 'Priya Singh', at: '2025-04-16T15:00:00', note: 'Good — but confirm the same inspection gap doesn’t exist on the other anchor points on this gantry before I sign off.' },
+    ],
   },
 ];
 
@@ -78,64 +98,72 @@ function replaceBarrierFailure(id: string, patch: Partial<BarrierFailure>): Barr
 }
 
 /** open -> resolved. Only valid when the failure doesn't require approval
- * (minor/moderate hazard). */
+ * (minor/moderate hazard) — no manager ever sees these. */
 export function resolveDirectly(id: string, note: string, resolvedBy: string): { failure: BarrierFailure | null; error?: string } {
   const current = BARRIER_FAILURES_BY_ID[id];
   if (!current) return { failure: null, error: 'Barrier failure not found.' };
   if (current.requiresApproval) return { failure: current, error: 'This hazard requires manager approval to resolve.' };
   if (!note.trim()) return { failure: current, error: 'A resolution note is required.' };
-  return { failure: replaceBarrierFailure(id, { status: 'resolved', resolutionNote: note.trim(), resolvedBy }) };
+  return {
+    failure: replaceBarrierFailure(id, {
+      status: 'resolved', resolutionNote: note.trim(), resolvedBy,
+      rounds: [...current.rounds, { kind: 'submitted', by: resolvedBy, at: new Date().toISOString(), note: note.trim() }],
+    }),
+  };
 }
 
-/** open -> pending_approval. Only valid when the failure requires approval
- * (serious/critical hazard). */
-export function submitForApproval(id: string, note: string, submittedBy: string): { failure: BarrierFailure | null; error?: string } {
+/** open|returned -> review. Same action either way — first submission or a
+ * resubmission after being returned — the difference is only in what the
+ * UI asks for (see BarrierFailureDetail.tsx): a full account of what was
+ * done the first time, a lighter confirmation against the manager's own
+ * stated direction after a return, not a fresh essay each round. */
+export function submitForReview(id: string, note: string, submittedBy: string): { failure: BarrierFailure | null; error?: string } {
   const current = BARRIER_FAILURES_BY_ID[id];
   if (!current) return { failure: null, error: 'Barrier failure not found.' };
   if (!current.requiresApproval) return { failure: current, error: 'This hazard can be resolved directly, no approval needed.' };
-  if (!note.trim()) return { failure: current, error: 'A resolution note is required.' };
-  return { failure: replaceBarrierFailure(id, { status: 'pending_approval', resolutionNote: note.trim(), resolvedBy: submittedBy }) };
-}
-
-/** pending_approval -> resolved. */
-export function approveResolution(id: string): BarrierFailure | null {
-  return replaceBarrierFailure(id, { status: 'resolved' });
-}
-
-/** pending_approval -> open. Clears the submitted resolution note — the
- * reason for sending it back is what stays visible, not a half-approved fix. */
-export function sendBack(id: string, reason: string): BarrierFailure | null {
-  return replaceBarrierFailure(id, { status: 'open', notes: `${BARRIER_FAILURES_BY_ID[id]?.notes ?? ''}\n\nSent back: ${reason}`.trim(), resolutionNote: undefined, resolvedBy: undefined });
-}
-
-/** specs/features/RISK-CONTROLS.md §6.4 — SLA-breach escalation. Pushes a
- * real barrier_failure Observation into the shared pool and records the
- * link. Available on any still-open failure; the UI gates this to failures
- * actually past their control's rectification SLA. */
-export function escalateToInsightPipeline(id: string): { failure: BarrierFailure | null; observation?: Observation; error?: string } {
-  const current = BARRIER_FAILURES_BY_ID[id];
-  if (!current) return { failure: null, error: 'Barrier failure not found.' };
-  if (current.status !== 'open') return { failure: current, error: 'Only open barrier failures can be escalated.' };
-  if (current.linkedObservationId) return { failure: current, error: 'Already escalated.' };
-
-  const obsId = `OB-EXT-${current.id}`;
-  const observation: Observation = {
-    id: obsId,
-    when: 'Just now',
-    occurredAt: MOCK_NOW.toISOString(),
-    siteId: current.siteId,
-    siteName: current.siteName,
-    observerName: current.flaggedBy,
-    summary: `${current.controlName} not in place, unresolved past SLA — ${current.hazardName}.`,
-    signal_type: 'barrier_failure',
-    energy_type: current.energyType,
-    status: 'enriched',
-    cleared_for_sharing: true,
-    sharing_scope: 'region',
+  if (!note.trim()) return { failure: current, error: 'A note is required.' };
+  return {
+    failure: replaceBarrierFailure(id, {
+      status: 'review', resolutionNote: note.trim(), resolvedBy: submittedBy,
+      rounds: [...current.rounds, { kind: 'submitted', by: submittedBy, at: new Date().toISOString(), note: note.trim() }],
+    }),
   };
-  pushExternalObservation(observation);
-  const updated = replaceBarrierFailure(id, { linkedObservationId: obsId });
-  return { failure: updated, observation };
+}
+
+/** review -> resolved. */
+export function approve(id: string, approvedBy: string): BarrierFailure | null {
+  const current = BARRIER_FAILURES_BY_ID[id];
+  if (!current) return null;
+  return replaceBarrierFailure(id, { status: 'resolved', rounds: [...current.rounds, { kind: 'approved', by: approvedBy, at: new Date().toISOString() }] });
+}
+
+/** review -> returned. Not capped — a manager can send the same failure
+ * back more than once if a resubmission genuinely isn't adequate — but see
+ * sentBackCount below for making repeat rounds visible rather than letting
+ * them silently look identical to a first-time review. */
+export function returnForRevision(id: string, direction: string, returnedBy: string): BarrierFailure | null {
+  const current = BARRIER_FAILURES_BY_ID[id];
+  if (!current) return null;
+  return replaceBarrierFailure(id, { status: 'returned', rounds: [...current.rounds, { kind: 'returned', by: returnedBy, at: new Date().toISOString(), note: direction.trim() }] });
+}
+
+/** How many times this has been sent back — the thing that makes a 3rd-round
+ * review read differently from a 1st-round one, since `status` alone can't
+ * tell them apart (it's `'review'` either way). */
+export function sentBackCount(b: BarrierFailure): number {
+  return b.rounds.filter((r) => r.kind === 'returned').length;
+}
+
+/** Stamps the fields a new StopWorkEvent is created alongside — called only
+ * from data/stopWork.ts's callStopWork, mirroring markIncidentStopWorkCalled. */
+export function markBarrierFailureStopWorkCalled(id: string, stopWorkEventId: string): BarrierFailure | null {
+  return replaceBarrierFailure(id, { stopWorkCalled: true, stopWorkEventId });
+}
+
+/** The warranted-but-not-called divergence, judged not to need a stop —
+ * mirrors dismissIncidentStopWork. */
+export function dismissBarrierFailureStopWork(id: string, dismissedBy: string, note: string): BarrierFailure | null {
+  return replaceBarrierFailure(id, { stopWorkDismissedBy: dismissedBy, stopWorkDismissedAt: new Date().toISOString(), stopWorkDismissedNote: note });
 }
 
 export function barrierFailureInRegion(failure: BarrierFailure, purview: PurviewFilter): boolean {

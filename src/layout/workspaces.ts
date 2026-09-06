@@ -6,9 +6,17 @@ export interface NavItem {
   label: string;
   icon: string;
   badge?: () => number | undefined;
+  /** True for a nav item that's a shortcut into ANOTHER workspace's own
+   * territory (e.g. My Workspace's link into Communities' real Feed) rather
+   * than a page this workspace owns — excluded from workspaceForPath's
+   * matching so visiting that path still resolves to its real owning
+   * workspace (and shows that workspace's own nav), not this one. Without
+   * this, whichever workspace is first in WORKSPACES to declare a nav item
+   * on a given top path segment would silently "win" that segment. */
+  external?: boolean;
 }
 
-export type WorkspaceId = 'insights' | 'incident' | 'risk' | 'communities' | 'admin';
+export type WorkspaceId = 'me' | 'insights' | 'incident' | 'risk' | 'communities' | 'admin';
 
 export interface Workspace {
   id: WorkspaceId;
@@ -23,6 +31,43 @@ export interface Workspace {
 }
 
 export const WORKSPACES: Workspace[] = [
+  {
+    // Icon is a Material Symbol name for every other workspace, but this
+    // one renders the active persona's own avatar instead — see
+    // WorkspaceSwitcher.tsx's `w.id === 'me'` special case. 'home' is still
+    // set here as a harmless fallback (e.g. if that special case is ever
+    // bypassed), never actually shown.
+    id: 'me',
+    label: 'My Workspace',
+    icon: 'home',
+    description: 'What needs your attention',
+    home: '/me',
+    nav: [
+      // Focus's badge count is purview-scoped (region/division) and owner-
+      // aware (Insight/Investigation), both React Context/props a plain
+      // `() => number` badge factory can't reach. Sidebar.tsx special-cases
+      // this one path instead of forcing every NavItem.badge to carry that
+      // through a non-hook signature.
+      //
+      // Deliberately just these three items, not one per source workspace —
+      // an earlier pass here duplicated every real workspace's own page
+      // (My Insights, My Investigations, ...) as a second route pointing at
+      // the same component with pre-filtered rows. That meant two ways to
+      // reach identical content, and every internal navigate() call inside
+      // the reused page (built for its own canonical route) would bounce
+      // you out of My Workspace's nav context the moment you clicked
+      // anything, since it always pushed the canonical path. Focus is the
+      // one place "my stuff across every workspace" actually lives now;
+      // there's nothing left for a per-type page to do that Focus's own
+      // Pills filter (by workspace/type) doesn't already cover.
+      { path: '/me', label: 'Focus', icon: 'center_focus_strong' },
+      // Communities' Feed needs no dedicated page: it already filters to
+      // isMyCommunity(community, user), so this is a shortcut into the
+      // existing view, not a new one.
+      { path: '/communities', label: 'Communities', icon: 'groups', external: true },
+      { path: '/settings', label: 'Account', icon: 'account_circle' },
+    ],
+  },
   {
     id: 'insights',
     label: 'Insights',
@@ -47,6 +92,7 @@ export const WORKSPACES: Workspace[] = [
     nav: [
       { path: '/incidents/dashboard', label: 'Dashboard', icon: 'grid_view' },
       { path: '/investigations', label: 'Investigations', icon: 'search' },
+      { path: '/incidents/stop-work', label: 'Stop Work', icon: 'front_hand' },
       { path: '/incidents', label: 'Incidents', icon: 'report' },
       { path: '/incidents/sites', label: 'Sites', icon: 'location_on' },
     ],
@@ -100,7 +146,7 @@ export const WORKSPACES: Workspace[] = [
  * whole paths would never match Admin at all. */
 export function workspaceForPath(pathname: string): Workspace {
   const section = pathname.split('/')[1];
-  return WORKSPACES.find((w) => w.nav.some((n) => n.path.split('/')[1] === section)) ?? WORKSPACES[0];
+  return WORKSPACES.find((w) => w.nav.some((n) => !n.external && n.path.split('/')[1] === section)) ?? WORKSPACES[0];
 }
 
 /** Longest nav path that is (or is an ancestor of) the current route — lets

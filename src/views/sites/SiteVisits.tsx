@@ -1,5 +1,6 @@
 import { useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { Tabs, Avatar, Badge, DataTable, Drawer, SignalMix, Dot, type Column } from '@/components';
 import { SiteHeader } from './SiteHeader';
 import { SITES } from '@/data/sites';
@@ -44,6 +45,7 @@ export function SiteVisits() {
     next.delete('visit');
     setParams(next);
   };
+  useListKeyNav(tab === 'upcoming' ? upcoming : past, selId, openVisit);
 
   const upcomingCols: Column<Visit>[] = [
     { key: 'visitor', label: 'Visitor', w: 220, render: (r) => (

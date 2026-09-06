@@ -56,7 +56,7 @@ export const INSIGHTS: Insight[] = [
     siteNames: ['Northgate Open Cut', 'Marlow Stockyard', 'Brookman Pit 2'], observationCount: 7, supporterInitials: ['AP', 'MC', 'SR'], energyTypes: ['none'], updated: '1h ago', updatedAt: '2025-05-07T09:00:00', cleared_for_toolbox: false },
   { id: 'INS-2198', status: 'review', kind: 'worksite_trend', theme: 'Spotter positioning', title: 'Spotter positioning at crusher exclusion zones',
     summary: 'Spotters standing inside marked exclusion at the Jewell crusher during truck reversing — 4 observations across 2 shifts.',
-    siteNames: ['Jewell Crusher'], observationCount: 4, supporterInitials: ['NO', 'JL'], energyTypes: ['kinetic'], updated: '3h ago', updatedAt: '2025-05-07T07:00:00', cleared_for_toolbox: false },
+    siteNames: ['Jewell Crusher'], observationCount: 4, supporterInitials: ['NO', 'JL'], energyTypes: ['kinetic'], owner: 'Jordan Marsh', updated: '3h ago', updatedAt: '2025-05-07T07:00:00', cleared_for_toolbox: false },
   { id: 'INS-2187', status: 'action', kind: 'worksite_trend', theme: 'Tool tethering', title: 'Tool tethering on elevated walkways',
     summary: 'Unsecured tools observed at height on overhead conveyor walkways across two shifts at Coolinga.',
     siteNames: ['Coolinga Plant'], observationCount: 6, supporterInitials: ['JL', 'TM'], energyTypes: ['gravitational'], owner: 'Jess Liang', updated: '5d ago', updatedAt: '2025-05-02T10:00:00', cleared_for_toolbox: true,

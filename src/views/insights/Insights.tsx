@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { PageHead, Tabs, Pills, Btn, IconBtn, LinkBtn, Drawer } from '@/components';
 import { INSIGHTS, INSIGHTS_BY_ID, insightInRegion } from '@/data/insights';
 import { OBSERVATIONS } from '@/data/observations';
@@ -12,14 +13,24 @@ import { InsightCard } from './InsightCard';
 import { InsightsBoard } from './InsightsBoard';
 import { insightsFitToHeight, type InsightsView } from './insightsLayout';
 import { ObsDetail } from '@/views/observations/ObsDetail';
-import type { InsightStatus } from '@/types';
+import type { Insight, InsightStatus } from '@/types';
 
 const VALID_TABS: InsightStatus[] = ['review', 'action', 'closed'];
 function isInsightStatus(v: string | null): v is InsightStatus {
   return !!v && (VALID_TABS as string[]).includes(v);
 }
 
-export function Insights() {
+export interface InsightsProps {
+  /** Pre-filtered row set — used by MyInsights.tsx to reuse this exact page
+   * (tabs, board/list toggle, detail panel, every action) scoped to one
+   * person instead of the whole purview. Everything below this line is
+   * unchanged either way; only where the base row set comes from differs. */
+  rows?: Insight[];
+  title?: string;
+  sub?: string;
+}
+
+export function Insights({ rows, title, sub }: InsightsProps = {}) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -56,7 +67,7 @@ export function Insights() {
   // replace elements in place, see data/insights.ts), so a memo keyed only on
   // [region, division] would go stale the moment an insight's status changes
   // without the purview itself changing. The filter is cheap at this scale.
-  const inRegion = INSIGHTS.filter((i) => insightInRegion(i, { region, division }));
+  const inRegion = rows ?? INSIGHTS.filter((i) => insightInRegion(i, { region, division }));
 
   const counts = {
     review: inRegion.filter((i) => i.status === 'review').length,
@@ -102,6 +113,7 @@ export function Insights() {
     setSelId(cardId);
     navigate(`/insights/${cardId}`, { replace: true });
   };
+  useListKeyNav(list, selId, selectCard, view === 'list');
 
   const selObsId = params.get('obs');
   const selObs = selObsId ? OBSERVATIONS.find((o) => o.id === selObsId) ?? null : null;
@@ -139,8 +151,8 @@ export function Insights() {
       ) : (
         <>
           <PageHead
-            title="Insights"
-            sub={`Cross-site patterns Hiviz has surfaced from ${purviewPhrase(region, division)}. Review, support and route them to action.`}
+            title={title ?? 'Insights'}
+            sub={sub ?? `Cross-site patterns Hiviz has surfaced from ${purviewPhrase(region, division)}. Review, support and route them to action.`}
             actions={
               <>
                 <IconBtn name="view_list" active={view === 'list'} onClick={() => setView('list')} />

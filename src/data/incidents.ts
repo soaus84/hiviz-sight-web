@@ -44,7 +44,10 @@ export const INCIDENTS: Incident[] = [
   { id: 'INC-4392', when: '2d ago', occurredAt: '2025-05-05T10:00:00', ...site('Northgate Open Cut'), reporterName: 'Kim Lee',
     description: 'Crew member twisted a knee stepping off haul truck cabin steps — sent for medical assessment, expected back on modified duties.',
     workType: 'Haulage', incidentType: 'injury', injuryClassification: 'medical_treatment', peopleInvolvedCount: 1, sceneSecured: true, notifiableFlag: false,
-    energyType: 'gravitational', barrierAssessment: 'barrier_degraded', severityClass: computeSeverityClass('injury', 'medical_treatment'), status: 'severe' },
+    energyType: 'gravitational', barrierAssessment: 'barrier_degraded', severityClass: computeSeverityClass('injury', 'medical_treatment'), status: 'severe',
+    stopWorkWarranted: true, stopWorkWarrantedRationale: 'Degraded barrier plus a medical-treatment injury sits close to the threshold — flagged for review out of caution.', stopWorkCalled: false,
+    stopWorkDismissedBy: 'R. Bridges', stopWorkDismissedAt: '2025-05-05T11:30:00',
+    stopWorkDismissedNote: 'Reviewed with the crew — the degraded control was unrelated to the injury mechanism, a pre-existing strain aggravated by the task rather than an energy release. No ongoing exposure.' },
 
   { id: 'INC-4380', when: '3d ago', occurredAt: '2025-05-04T09:00:00', ...site('Ridgeback Processing'), reporterName: 'A. Pereira',
     description: 'Conveyor guard found unlatched during pre-start — isolated and re-secured before the line started.',
@@ -53,7 +56,8 @@ export const INCIDENTS: Incident[] = [
   { id: 'INC-4375', when: '2d ago', occurredAt: '2025-05-05T13:00:00', ...site('Ridgeback Processing'), reporterName: 'A. Pereira',
     description: 'Reversing forklift clipped a stacked pallet, no injuries — pallet and light fittings damaged.',
     workType: 'Logistics', workTypeId: 'hrw24', incidentType: 'property-damage', injuryClassification: 'none', peopleInvolvedCount: 0, sceneSecured: true, notifiableFlag: false,
-    energyType: 'kinetic', barrierAssessment: 'barrier_degraded', severityClass: computeSeverityClass('property-damage', 'none'), status: 'severe' },
+    energyType: 'kinetic', barrierAssessment: 'barrier_degraded', severityClass: computeSeverityClass('property-damage', 'none'), status: 'severe',
+    stopWorkCalled: true, stopWorkEventId: 'SW-3' },
 
   { id: 'INC-4370', when: '4d ago', occurredAt: '2025-05-03T09:00:00', ...site('Marlow Stockyard'), reporterName: 'D. Cole',
     description: 'Yard crew nearly walked into the swing radius of a loader turning without a horn sounded — no contact.',
@@ -63,7 +67,8 @@ export const INCIDENTS: Incident[] = [
   { id: 'INC-4360', when: 'Yest 15:40', occurredAt: '2025-05-06T15:40:00', ...site('Coolinga Plant'), reporterName: 'Jess Liang',
     description: 'Crew member fell from a conveyor walkway platform during a hot afternoon shift — fractured wrist, off work pending recovery.',
     workType: 'Processing', workTypeId: 'hrw32', incidentType: 'injury', injuryClassification: 'lost_time', peopleInvolvedCount: 1, sceneSecured: true, notifiableFlag: true,
-    energyType: 'gravitational', barrierAssessment: 'barrier_failed', severityClass: computeSeverityClass('injury', 'lost_time'), status: 'severe' },
+    energyType: 'gravitational', barrierAssessment: 'barrier_failed', severityClass: computeSeverityClass('injury', 'lost_time'), status: 'severe',
+    stopWorkWarranted: true, stopWorkWarrantedRationale: 'Fall from height with a failed control and a lost-time injury — this crosses the threshold for an immediate stop regardless of whether the task felt routine.', stopWorkCalled: false },
   { id: 'INC-4355', when: '6d ago', occurredAt: '2025-05-01T09:00:00', ...site('Coolinga Plant'), reporterName: 'Jess Liang',
     description: 'Minor hydraulic oil spill at the crusher line, contained with absorbent and reported to environmental register.',
     workType: 'Processing', incidentType: 'environmental', injuryClassification: 'none', peopleInvolvedCount: 0, sceneSecured: true, notifiableFlag: false,
@@ -77,7 +82,8 @@ export const INCIDENTS: Incident[] = [
   { id: 'INC-4320', when: '3w ago', occurredAt: '2025-04-16T09:00:00', ...site('Jewell Crusher'), reporterName: 'Marcus Okafor',
     description: 'Contractor struck by a reversing haul truck at the crusher exclusion boundary — fatality. Site shut down, investigation opened immediately.',
     workType: 'Crushing', workTypeId: 'hrw24', incidentType: 'injury', injuryClassification: 'fatality', peopleInvolvedCount: 1, sceneSecured: true, notifiableFlag: true,
-    energyType: 'kinetic', barrierAssessment: 'barrier_absent', severityClass: computeSeverityClass('injury', 'fatality'), status: 'linked', linkedInvestigationId: 'INV-3098' },
+    energyType: 'kinetic', barrierAssessment: 'barrier_absent', severityClass: computeSeverityClass('injury', 'fatality'), status: 'linked', linkedInvestigationId: 'INV-3098',
+    stopWorkWarranted: true, stopWorkCalled: true, stopWorkEventId: 'SW-1' },
   { id: 'INC-4300', when: '2d ago', occurredAt: '2025-05-05T09:00:00', ...site('Jewell Crusher'), reporterName: 'Marcus Okafor',
     description: 'Spotter stepped back inside the exclusion line unprompted after noticing a truck approaching — no contact.',
     workType: 'Crushing', workTypeId: 'hrw24', incidentType: 'near-miss', injuryClassification: 'none', peopleInvolvedCount: 1, sceneSecured: true, notifiableFlag: false,
@@ -126,6 +132,19 @@ export function progressToInvestigation(id: string): Incident | null {
   if (!current) return null;
   const investigation = openInvestigationFromIncident(current);
   return replaceIncident(id, { status: 'linked', linkedInvestigationId: investigation.id });
+}
+
+/** Stamps the fields a new StopWorkEvent is created alongside — called only
+ * from data/stopWork.ts's callStopWork, which owns creating the event
+ * itself; this just records the link back on the source. */
+export function markIncidentStopWorkCalled(id: string, stopWorkEventId: string): Incident | null {
+  return replaceIncident(id, { stopWorkCalled: true, stopWorkEventId });
+}
+
+/** The warranted-but-not-called divergence, judged not to need a stop — no
+ * StopWorkEvent is ever created for this exit, so it's recorded here directly. */
+export function dismissIncidentStopWork(id: string, dismissedBy: string, note: string): Incident | null {
+  return replaceIncident(id, { stopWorkDismissedBy: dismissedBy, stopWorkDismissedAt: new Date().toISOString(), stopWorkDismissedNote: note });
 }
 
 export function incidentInRegion(incident: Incident, purview: PurviewFilter): boolean {

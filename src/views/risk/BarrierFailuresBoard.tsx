@@ -6,7 +6,8 @@ import type { BarrierFailure, BarrierFailureStatus } from '@/types';
 
 const COLUMNS: { status: BarrierFailureStatus; label: string }[] = [
   { status: 'open', label: 'Open' },
-  { status: 'pending_approval', label: 'Pending approval' },
+  { status: 'review', label: 'In review' },
+  { status: 'returned', label: 'Returned' },
   { status: 'resolved', label: 'Resolved' },
 ];
 

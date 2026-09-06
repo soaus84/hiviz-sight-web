@@ -10,20 +10,18 @@ import {
 import { SITES } from '@/data/sites';
 import { energyLabel } from '@/data/observations';
 import { HIGH_RISK_WORK } from '@/data/admin/taxonomies';
-import { SEVERITY_DISPLAY } from './riskDisplay';
+import { SEVERITY_DISPLAY, FREQUENCY_LABEL } from './riskDisplay';
 import type { ControlType, CriticalControl, EnergyType, Hazard, SeverityClass, VerificationFrequency, WorksiteControlStatus } from '@/types';
 
-const FREQUENCY_LABEL: Record<VerificationFrequency, string> = {
-  shift_start: 'Shift start', daily: 'Daily', before_ignition: 'Before ignition', event_triggered: 'Event triggered', weekly: 'Weekly',
-};
 const ENERGY_TYPES: EnergyType[] = ['kinetic', 'gravitational', 'electrical', 'thermal', 'chemical', 'pressure', 'noise_vibration', 'none'];
 const SEVERITIES: SeverityClass[] = ['minor', 'moderate', 'serious', 'critical'];
 const FREQUENCIES: VerificationFrequency[] = ['shift_start', 'daily', 'before_ignition', 'event_triggered', 'weekly'];
 
-const fieldLabel = { display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' as const, color: colors.inkMuted, marginBottom: 5 };
+const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13.5, outline: 'none' };
 
 function ControlCard({ control, onPush, onEdit }: { control: CriticalControl; onPush: () => void; onEdit: () => void }) {
+  const navigate = useNavigate();
   const instances = WORKSITE_CONTROLS.filter((wc) => wc.criticalControlId === control.id);
   const targetSites = SITES.filter((s) => s.workTypeIds.includes(HAZARDS.find((h) => h.id === control.hazardId)!.workTypeId));
   const untargeted = targetSites.length - instances.length;
@@ -32,7 +30,10 @@ function ControlCard({ control, onPush, onEdit }: { control: CriticalControl; on
   return (
     <Card pad={16} style={{ marginBottom: 10 }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, marginBottom: 4 }}>
-        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700 }}>{control.name}</div>
+        <div onClick={() => navigate(`/risk/controls/${control.id}`)} style={{ display: 'flex', alignItems: 'center', gap: 3, cursor: 'pointer' }}>
+          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 14, fontWeight: 700 }}>{control.name}</span>
+          <Icon name="chevron_right" size={16} color={colors.inkMuted} />
+        </div>
         <IconBtn name="edit" size={16} onClick={onEdit} />
       </div>
       <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, lineHeight: 1.45, marginBottom: 10 }}>{control.verificationPrompt}</div>

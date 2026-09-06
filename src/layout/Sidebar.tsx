@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { Icon, Avatar } from '@/components';
+import { Icon } from '@/components';
+import { usePurviewScope } from '@/state/PurviewScope';
 import { useActiveUser } from '@/state/ActiveUser';
+import { countFocusItems } from '@/data/myWorkspace';
 import { FEED_VISITED_EVENT } from '@/views/communities/unread';
 import { WorkspaceSwitcher } from './WorkspaceSwitcher';
 import { DrilldownHeader } from './DrilldownHeader';
@@ -17,9 +19,8 @@ export interface SidebarProps {
 export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
   const location = useLocation();
   const navigate = useNavigate();
+  const { region, division } = usePurviewScope();
   const { user } = useActiveUser();
-  const activeSection = '/' + location.pathname.split('/')[1];
-  const onSettings = activeSection === '/settings';
   const workspace = workspaceForPath(location.pathname);
   const drilldown = getDrilldown(location.pathname);
   const nav = drilldown ? drilldown.nav : workspace.nav;
@@ -74,7 +75,9 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
       >
         {nav.map((n) => {
           const on = n.path === activePath;
-          const badge = n.badge?.();
+          // Focus's count is purview-scoped — the one badge that can't be a
+          // plain zero-arg NavItem.badge() (see workspaces.ts's note).
+          const badge = n.path === '/me' ? countFocusItems({ region, division }, user.name) : n.badge?.();
           return (
             <button
               key={n.path}
@@ -147,38 +150,6 @@ export function Sidebar({ collapsed, onNavigate }: SidebarProps) {
             </button>
           );
         })}
-      </div>
-
-      <div style={{ padding: collapsed ? '12px 8px' : 12, borderTop: `1px solid ${colors.sideRule}` }}>
-        <button
-          className="a-nav"
-          onClick={() => go('/settings')}
-          title={collapsed ? `${user.name} · Account` : undefined}
-          style={{
-            width: '100%',
-            minHeight: 44,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: collapsed ? 'center' : 'flex-start',
-            gap: 11,
-            padding: collapsed ? '8px 0' : '8px 10px',
-            borderRadius: 'var(--radius-md)',
-            border: 'none',
-            cursor: 'pointer',
-            textAlign: 'left',
-            background: onSettings ? 'rgba(255,255,255,0.08)' : 'transparent',
-          }}
-        >
-          <Avatar name={user.name} size={34} tone={colors.hi} />
-          {!collapsed && (
-            <div style={{ minWidth: 0 }}>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                {user.name}
-              </div>
-              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11.5, color: onSettings ? colors.sideText : colors.sideMuted, marginTop: 1 }}>{user.role}</div>
-            </div>
-          )}
-        </button>
       </div>
     </div>
   );

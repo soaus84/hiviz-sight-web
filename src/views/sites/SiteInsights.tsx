@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { Tabs, Pills, Btn, IconBtn, LinkBtn, Drawer } from '@/components';
 import { SiteHeader } from './SiteHeader';
 import { SITES } from '@/data/sites';
@@ -102,6 +103,7 @@ export function SiteInsights() {
     next.set('insight', cardId);
     setParams(next, { replace: true });
   };
+  useListKeyNav(list, selId, selectCard, view === 'list');
   const clearSelection = () => {
     const next = new URLSearchParams(params);
     next.delete('insight');

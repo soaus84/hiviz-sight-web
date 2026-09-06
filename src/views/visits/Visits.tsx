@@ -1,5 +1,6 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { PageHead, Tabs, Btn, IconBtn, Avatar, Badge, DataTable, Drawer, SignalMix, Dot, type Column } from '@/components';
 import { VISITS } from '@/data/visits';
 import { inPurview, purviewPhrase } from '@/data/purview';
@@ -13,7 +14,16 @@ type VisitTab = 'upcoming' | 'past';
 const VALID_TABS: VisitTab[] = ['upcoming', 'past'];
 type VisitView = 'list' | 'map';
 
-export function Visits() {
+export interface VisitsProps {
+  /** Pre-filtered row set — used by MyVisits.tsx to reuse this exact page
+   * (tabs, list/map toggle, drawer, every action) scoped to one person's
+   * own visits instead of the whole purview. */
+  rows?: Visit[];
+  title?: string;
+  sub?: string;
+}
+
+export function Visits({ rows, title, sub }: VisitsProps = {}) {
   const navigate = useNavigate();
   const { region, division, isAllRegions, isAllDivisions } = usePurviewScope();
   const [params, setParams] = useSearchParams();
@@ -43,7 +53,7 @@ export function Visits() {
     setParams(next);
   };
 
-  const inRegion = VISITS.filter((v) => inPurview(v, { region, division }));
+  const inRegion = rows ?? VISITS.filter((v) => inPurview(v, { region, division }));
   const counts = {
     upcoming: inRegion.filter((v) => v.state === 'live' || v.state === 'upcoming').length,
     past: inRegion.filter((v) => v.state === 'past').length,
@@ -54,6 +64,7 @@ export function Visits() {
   const upcoming = [...inRegion.filter((v) => v.state === 'live'), ...inRegion.filter((v) => v.state === 'upcoming')];
   const past = inRegion.filter((v) => v.state === 'past');
   const sel = inRegion.find((v) => v.id === selId) || null;
+  useListKeyNav(tab === 'upcoming' ? upcoming : past, selId, openVisit, view === 'list');
 
   const scopeCols: Column<Visit>[] = [
     ...(isAllRegions ? [{ key: 'region', label: 'Region', w: 100, render: (r: Visit) => <span style={{ color: colors.inkSoft }}>{r.region}</span> }] : []),
@@ -97,8 +108,8 @@ export function Visits() {
   return (
     <div>
       <PageHead
-        title="Visits"
-        sub={`Plan, brief and review site visits across ${purviewPhrase(region, division)}.`}
+        title={title ?? 'Visits'}
+        sub={sub ?? `Plan, brief and review site visits across ${purviewPhrase(region, division)}.`}
         actions={<>
           <IconBtn name="view_list" active={view === 'list'} onClick={() => setView('list')} />
           <IconBtn name="map" active={view === 'map'} onClick={() => setView('map')} />

@@ -1,12 +1,15 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { Card, Badge, Btn, AINote, Avatar } from '@/components';
+import { Card, Badge, Btn, AINote, Avatar, Toggle } from '@/components';
 import { energyLabel } from '@/data/observations';
-import { acknowledgeIncident, progressToInvestigation } from '@/data/incidents';
-import { INCIDENT_STATUS_DISPLAY, INCIDENT_TYPE_LABEL, SEVERITY_DISPLAY } from './incidentDisplay';
+import { acknowledgeIncident, progressToInvestigation, INCIDENTS_BY_ID } from '@/data/incidents';
+import { useActiveUser } from '@/state/ActiveUser';
+import { STOP_WORK_EVENTS_BY_ID, callStopWork, dismissStopWorkWarning } from '@/data/stopWork';
+import { INCIDENT_STATUS_DISPLAY, INCIDENT_TYPE_LABEL, SEVERITY_DISPLAY, STOP_WORK_STATUS_DISPLAY } from './incidentDisplay';
 import type { Incident } from '@/types';
 
-const fieldLabel = { display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' as const, color: colors.inkMuted, marginBottom: 5 };
+const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const textareaStyle = { width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.4, resize: 'vertical' as const, outline: 'none' };
 
 /** The review-stage twin of InvestigationDetail — same Card shell, badge
@@ -20,10 +23,22 @@ const textareaStyle = { width: '100%', padding: '8px 10px', borderRadius: 'var(-
  * acknowledged/linked follow-up states are covered by the drawer variant,
  * IncidentDetail, used everywhere else an incident of any status is opened. */
 export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?: () => void }) {
+  const navigate = useNavigate();
+  const { user } = useActiveUser();
   const status = INCIDENT_STATUS_DISPLAY.severe;
   const severity = SEVERITY_DISPLAY[i.severityClass];
   const [ackOpen, setAckOpen] = useState(false);
   const [ackComment, setAckComment] = useState('');
+  const [swNote, setSwNote] = useState('');
+  const [siteWide, setSiteWide] = useState(false);
+  // Neither a stop-work decision (recorded on the Incident itself, but via
+  // a replace-in-place that swaps the object, not the prop we were passed)
+  // nor a StopWorkEvent's own status change touches i.status, so the
+  // parent's onChanged (which only reacts to that) won't re-render this
+  // component with fresh data — read live from the BY_ID maps and force a
+  // local re-render instead.
+  const [, forceRender] = useState(0);
+  const live = INCIDENTS_BY_ID[i.id] ?? i;
 
   const handleAcknowledge = () => {
     if (!ackComment.trim()) return;
@@ -32,6 +47,20 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
   };
   const handleProgress = () => {
     progressToInvestigation(i.id);
+    onChanged?.();
+  };
+
+  const stopWorkEvent = live.stopWorkEventId ? STOP_WORK_EVENTS_BY_ID[live.stopWorkEventId] : undefined;
+  const needsStopWorkDecision = live.stopWorkWarranted && !live.stopWorkCalled && !live.stopWorkDismissedBy;
+  const handleCallStopWork = () => {
+    callStopWork('incident', i.id, user.name, siteWide);
+    forceRender((v) => v + 1);
+    onChanged?.();
+  };
+  const handleDismissStopWork = () => {
+    if (!swNote.trim()) return;
+    dismissStopWorkWarning('incident', i.id, user.name, swNote.trim());
+    forceRender((v) => v + 1);
     onChanged?.();
   };
 
@@ -48,6 +77,46 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginTop: 12 }}>
         <Badge tone="primary" outline icon="place">{i.siteName}</Badge>
       </div>
+
+      {needsStopWorkDecision && (
+        <Card pad={16} style={{ marginTop: 14, border: `1px solid ${colors.red}`, boxShadow: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+            <Badge tone="error" icon="front_hand">Stop work review</Badge>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft }}>AI flagged this as warranting a stop — nobody called one.</span>
+          </div>
+          {live.stopWorkWarrantedRationale && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>{live.stopWorkWarrantedRationale}</div>}
+          <label style={fieldLabel}>Note</label>
+          <textarea className="a-input" value={swNote} onChange={(e) => setSwNote(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 12 }} placeholder="Only needed to dismiss — why this doesn't warrant a stop…" />
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600 }}>Site-wide stop</span>
+            <Toggle checked={siteWide} onChange={setSiteWide} />
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <Btn variant="ghost" size="sm" disabled={!swNote.trim()} onClick={handleDismissStopWork}>Dismiss</Btn>
+            <Btn variant="danger" size="sm" icon="front_hand" onClick={handleCallStopWork}>Request stop work</Btn>
+          </div>
+        </Card>
+      )}
+      {live.stopWorkDismissedBy && !stopWorkEvent && (
+        <Card pad={16} style={{ marginTop: 14, boxShadow: 'none' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+            <Badge tone="primary" outline icon="front_hand">Stop work dismissed</Badge>
+          </div>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5 }}>{live.stopWorkDismissedNote}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 8 }}>— {live.stopWorkDismissedBy}</div>
+        </Card>
+      )}
+      {stopWorkEvent && (
+        <div
+          className="a-card-int"
+          onClick={() => navigate('/incidents/stop-work')}
+          style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
+        >
+          <Badge tone={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].tone} outline icon="front_hand">{STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].label}</Badge>
+          {stopWorkEvent.siteWide && <Badge tone="error" outline>Site-wide</Badge>}
+          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, textDecoration: 'underline' }}>View in Stop Work</span>
+        </div>
+      )}
 
       <div style={{ marginTop: 14, background: colors.fill, borderRadius: 'var(--radius-lg)', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>

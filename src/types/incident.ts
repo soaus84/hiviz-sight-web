@@ -49,6 +49,100 @@ export interface Incident {
   linkedInvestigationId?: string;
   /** Set when status = 'acknowledged' — the reviewer's reason for closing without an investigation. */
   acknowledgeComment?: string;
+
+  // Stop-work fields — specs/features/INCIDENT-CAPTURE.md's stop_work_relevant/
+  // stop_work_called, collected at capture time. The "was a stop warranted,
+  // was it called" decision lives entirely on these fields (mirrored on
+  // BarrierFailure — types/risk.ts) — a StopWorkEvent is only ever created
+  // once a stop is actually called, never for the undecided divergence. See
+  // data/stopWork.ts's top-of-file note.
+  /** AI enrichment's judgment, independent of what actually happened. */
+  stopWorkWarranted?: boolean;
+  stopWorkWarrantedRationale?: string;
+  /** What the reporter/supervisor actually did at the time, or what a
+   * manager subsequently decided — true the moment either happens. */
+  stopWorkCalled?: boolean;
+  /** Set once a StopWorkEvent exists — data/stopWork.ts. Only ever set
+   * alongside stopWorkCalled: true. */
+  stopWorkEventId?: string;
+  /** The warranted-but-not-called divergence, judged by a manager not to
+   * need a stop — the terminal exit that isn't "call it". Recorded directly
+   * here since no StopWorkEvent is ever created for a dismissed one. */
+  stopWorkDismissedBy?: string;
+  stopWorkDismissedAt?: string;
+  stopWorkDismissedNote?: string;
+}
+
+/**
+ * pending_stop — a stop has been requested (by a manager, off the
+ *                warranted-but-not-called divergence, or by upgrading one
+ *                already called) but the site hasn't confirmed it's
+ *                actually stopped yet. Its own visible stage: assuming a
+ *                requested stop actually happened is a safety failure, not
+ *                just a bookkeeping gap (unlike the equivalent gap on the
+ *                resume side — see `resumed` below).
+ * stopped      — confirmed stopped, either via pending_stop's confirmation
+ *                or immediately when the reporter/supervisor already called
+ *                it at capture time (stopWorkCalled: true) — no request/
+ *                confirm gap to speak of. Covers the whole span until
+ *                resumed — approval to resume (see requiresApproval) is a
+ *                condition on that one action, not a separate visible stage.
+ * resumed      — work has resumed, with sign-off. Terminal.
+ *
+ * The "was a stop warranted, was it called" decision itself isn't a status
+ * here — it's Incident.stopWorkWarranted/stopWorkCalled/stopWorkDismissedBy
+ * (or BarrierFailure's mirrored fields, types/risk.ts). A StopWorkEvent is
+ * only ever born once a stop is actually happening — see data/stopWork.ts's
+ * top-of-file note.
+ */
+export type StopWorkStatus = 'pending_stop' | 'stopped' | 'resumed';
+
+/** A distinct authority question from BarrierFailure's: "is it safe to
+ * resume the broader work" rather than "is this one registered control
+ * back in place" — the two can coexist on the same underlying event
+ * without either one carrying weight it wasn't built for. See
+ * data/stopWork.ts's top-of-file note.
+ *
+ * Two possible origins, not one funnel — sourceKind/sourceId point at
+ * whichever raised it: an Incident's stop-work fields, or BarrierFailure's
+ * mirrored ones. Either can itself be "the site already called it" or "a
+ * manager called it off the undecided divergence" — see requestedBy vs
+ * confirmedBy below. */
+export interface StopWorkEvent {
+  id: string;
+  status: StopWorkStatus;
+  siteId: string;
+  siteName: string;
+  sourceKind: 'incident' | 'barrierFailure';
+  sourceId: string;
+  workType: string;
+  severityClass: SeverityClass;
+  /** Copied at creation from the source's own warranted rationale — the
+   * "why" for this specific stop, not re-derived from the source each render. */
+  warrantedRationale?: string;
+  /** Whether this stop covers the whole site or just workType — a
+   * manager's call, never settable from a site-side capture. Editable for
+   * the life of the stop (not fixed at creation) via data/stopWork.ts's
+   * setSiteWide — a situation can turn out broader than first assessed. */
+  siteWide?: boolean;
+  /** Set at creation via a manager's Request stop work action — who
+   * requested it, not who executed it. Unset when the site already called
+   * it at capture (nothing to request, it already happened). */
+  requestedBy?: string;
+  requestedAt?: string;
+  /** Set once the site confirms it's actually stopped — pending_stop ->
+   * stopped — or immediately at creation, when it was already
+   * stopWorkCalled = true at capture (no request/confirm gap to speak of). */
+  confirmedBy?: string;
+  confirmedAt?: string;
+  /** Derived: severityClass is 'serious' | 'critical' — reuses
+   * BarrierFailure's exact rule. Gates *who* can action the single resume
+   * transition (a name is required either way; for serious/critical it
+   * needs to read as a manager's), not a separate pipeline stage. */
+  requiresApproval: boolean;
+  resumeNote?: string;
+  resumedBy?: string;
+  resumedAt?: string;
 }
 
 /**

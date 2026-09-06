@@ -76,7 +76,39 @@ export interface WorksiteControl {
  * pending_approval — fixed and submitted for manager sign-off (serious/critical hazards only)
  * resolved         — closed, either self-resolved (minor/moderate) or manager-approved
  */
-export type BarrierFailureStatus = 'open' | 'pending_approval' | 'resolved';
+/**
+ * open     — site's job, not yet submitted. No manager action exists here.
+ * review   — submitted (first time, or after a return), awaiting the
+ *            manager's decision: approve or return. Only status
+ *            `requiresApproval` failures ever reach this — see
+ *            data/barrierFailures.ts's requiresApproval.
+ * returned — the manager sent it back with a specific direction; the
+ *            site's turn again, not the manager's. Deliberately distinct
+ *            from `open` — a rejected resubmission needing to look
+ *            different from one nobody's touched yet was the whole point
+ *            of adding this status (see data/myWorkspace.ts's stocktake
+ *            note on why it isn't just `open` again).
+ * resolved — approved. Terminal.
+ */
+export type BarrierFailureStatus = 'open' | 'review' | 'returned' | 'resolved';
+
+/** One submission-or-decision in a BarrierFailure's approval history —
+ * see BarrierFailure.rounds. The loop (submit -> review -> returned ->
+ * resubmit -> review -> ...) isn't capped; what changes each round isn't
+ * how many are allowed, but how much each one costs: a first submission
+ * (`kind: 'submitted'`, `open` -> `review`) needs a real account of what
+ * was done, while a resubmission after a return is a lighter confirmation
+ * against the manager's own stated direction, not a fresh essay — see
+ * views/risk/BarrierFailureDetail.tsx. */
+export interface BarrierFailureRound {
+  kind: 'submitted' | 'approved' | 'returned';
+  by: string;
+  at: string;
+  /** The site's account of what was done (kind: submitted), or the
+   * manager's specific direction for the next round (kind: returned).
+   * Unset for kind: approved — nothing more to say once it's closed. */
+  note?: string;
+}
 
 /** A control verification that came back not-in-place. Carries its own full
  * story at creation (unlike Investigation, there's no separate story-bearing
@@ -100,8 +132,30 @@ export interface BarrierFailure {
   /** What the verifier saw. */
   notes?: string;
   status: BarrierFailureStatus;
+  /** Append-only approval history — every submission, return, and the
+   * final approval, in order. The one place "is this the first review or
+   * the third" is actually answered, rather than left for the status alone
+   * (which can't tell you, since it's the same value each time round). */
+  rounds: BarrierFailureRound[];
+  /** Convenience mirror of the latest round's note/author — kept in sync
+   * by data/barrierFailures.ts's mutators alongside `rounds`, so existing
+   * "what's the current resolution text" call sites don't need to reach
+   * into the array themselves. `rounds` is the source of truth for history;
+   * these two are a read shortcut for "right now", nothing more. */
   resolutionNote?: string;
   resolvedBy?: string;
-  /** Set once escalated into the Insight pipeline — data/barrierFailures.ts's escalateToInsightPipeline. */
-  linkedObservationId?: string;
+
+  // Stop-work fields, mirroring Incident's exact fields (types/incident.ts)
+  // field-for-field — a critical control failure is the same live-hazard
+  // question as an Incident's near-miss, just caught pre-event by a
+  // scheduled check instead of post-event by something almost happening.
+  // Same decision, same shape, deliberately not re-derived. See
+  // data/stopWork.ts's top-of-file note.
+  stopWorkWarranted?: boolean;
+  stopWorkWarrantedRationale?: string;
+  stopWorkCalled?: boolean;
+  stopWorkEventId?: string;
+  stopWorkDismissedBy?: string;
+  stopWorkDismissedAt?: string;
+  stopWorkDismissedNote?: string;
 }

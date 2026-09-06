@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { PageHead, Tabs, Btn, IconBtn, LinkBtn } from '@/components';
 import { BARRIER_FAILURES, BARRIER_FAILURES_BY_ID, barrierFailureInRegion } from '@/data/barrierFailures';
 import { purviewPhrase } from '@/data/purview';
@@ -12,12 +13,22 @@ import { BarrierFailuresBoard } from './BarrierFailuresBoard';
 import { insightsFitToHeight, type InsightsView } from '@/views/insights/insightsLayout';
 import type { BarrierFailureStatus } from '@/types';
 
-const VALID_TABS: BarrierFailureStatus[] = ['open', 'pending_approval', 'resolved'];
+const VALID_TABS: BarrierFailureStatus[] = ['open', 'review', 'returned', 'resolved'];
 function isBarrierFailureStatus(v: string | null): v is BarrierFailureStatus {
   return !!v && (VALID_TABS as string[]).includes(v);
 }
 
-export function BarrierFailures() {
+export interface BarrierFailuresProps {
+  title?: string;
+  sub?: string;
+}
+
+// No row-set override, unlike Insights/Investigations/Visits/Observations —
+// Barrier Failures has no per-person assignee (site supervisor/advisor's
+// structural duty, see data/myWorkspace.ts's top-of-file note), so
+// purview-scoped IS the personal view already; MyBarrierFailures.tsx
+// renders this component unchanged bar a friendlier title.
+export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
@@ -45,7 +56,8 @@ export function BarrierFailures() {
 
   const counts = {
     open: inRegion.filter((b) => b.status === 'open').length,
-    pending_approval: inRegion.filter((b) => b.status === 'pending_approval').length,
+    review: inRegion.filter((b) => b.status === 'review').length,
+    returned: inRegion.filter((b) => b.status === 'returned').length,
     resolved: inRegion.filter((b) => b.status === 'resolved').length,
   };
   const list = inRegion.filter((b) => b.status === tab);
@@ -75,6 +87,7 @@ export function BarrierFailures() {
     setSelId(cardId);
     navigate(`/risk/barrier-failures/${cardId}`, { replace: true });
   };
+  useListKeyNav(list, selId, selectCard, view === 'list');
 
   const singleColumn = breakpoint !== 'desktop';
   const showList = !singleColumn || !sel;
@@ -89,8 +102,8 @@ export function BarrierFailures() {
       ) : (
         <>
           <PageHead
-            title="Barrier Failures"
-            sub={`Control verifications that came back not-in-place across ${purviewPhrase(region, division)}.`}
+            title={title ?? 'Barrier Failures'}
+            sub={sub ?? `Control verifications that came back not-in-place across ${purviewPhrase(region, division)}.`}
             actions={
               <>
                 <IconBtn name="view_list" active={view === 'list'} onClick={() => setView('list')} />
@@ -101,7 +114,7 @@ export function BarrierFailures() {
           />
           {view === 'list' && (
             <div style={{ marginBottom: 20 }}>
-              <Tabs value={tab} onChange={setTab} items={[{ k: 'open', label: 'Open', n: counts.open }, { k: 'pending_approval', label: 'Pending approval', n: counts.pending_approval }, { k: 'resolved', label: 'Resolved', n: counts.resolved }]} />
+              <Tabs value={tab} onChange={setTab} items={[{ k: 'open', label: 'Open', n: counts.open }, { k: 'review', label: 'In review', n: counts.review }, { k: 'returned', label: 'Returned', n: counts.returned }, { k: 'resolved', label: 'Resolved', n: counts.resolved }]} />
             </div>
           )}
         </>

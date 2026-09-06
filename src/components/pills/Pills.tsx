@@ -5,6 +5,10 @@ export interface PillItem {
   k: string;
   label: string;
   n?: number;
+  /** Shown but unselectable — e.g. a category that exists but currently has
+   * nothing in it. Lets a list of pills double as "everything this could
+   * ever contain", not just "what's here right now". */
+  disabled?: boolean;
 }
 
 export interface PillsProps {
@@ -22,7 +26,8 @@ export function Pills({ items, value, onChange }: PillsProps) {
         return (
           <button
             key={it.k}
-            onClick={() => onChange(it.k)}
+            onClick={() => { if (!it.disabled) onChange(it.k); }}
+            disabled={it.disabled}
             className="a-pill"
             style={{
               fontFamily: 'var(--font-sans)',
@@ -34,7 +39,8 @@ export function Pills({ items, value, onChange }: PillsProps) {
               border: `1px solid ${on ? colors.ink : colors.rule}`,
               background: on ? colors.ink : colors.panel,
               color: on ? '#fff' : colors.inkSoft,
-              cursor: 'pointer',
+              cursor: it.disabled ? 'default' : 'pointer',
+              opacity: it.disabled ? 0.45 : 1,
               display: 'inline-flex',
               alignItems: 'center',
               gap: 6,

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { PageHead, Btn, Pills, Search, DataTable, Badge, Drawer, type Column } from '@/components';
 import { OBSERVATIONS, SIGNAL_DISPLAY, energyLabel } from '@/data/observations';
 import { SITES_BY_ID } from '@/data/sites';
@@ -15,7 +16,16 @@ const STATUS_LABEL: Record<Observation['status'], [string, Tone]> = {
   linked: ['Linked to insight', 'info'],
 };
 
-export function Observations() {
+export interface ObservationsProps {
+  /** Pre-filtered row set — used by MyObservations.tsx to reuse this exact
+   * page (signal pills, search, table, detail drawer) scoped to one
+   * person's own observations instead of the whole purview. */
+  overrideRows?: Observation[];
+  title?: string;
+  sub?: string;
+}
+
+export function Observations({ overrideRows, title, sub }: ObservationsProps = {}) {
   const { region, division, isAllRegions, isAllDivisions } = usePurviewScope();
   const [params, setParams] = useSearchParams();
   const signal = (params.get('signal') as SignalType | 'all') || 'all';
@@ -45,12 +55,12 @@ export function Observations() {
   };
 
   const rows = useMemo(
-    () => OBSERVATIONS
-      .filter((o) => { const site = SITES_BY_ID[o.siteId]; return !!site && inPurview(site, { region, division }); })
+    () => (overrideRows ?? OBSERVATIONS.filter((o) => { const site = SITES_BY_ID[o.siteId]; return !!site && inPurview(site, { region, division }); }))
       .filter((o) => signal === 'all' || o.signal_type === signal)
       .filter((o) => !query || o.summary.toLowerCase().includes(query.toLowerCase()) || o.siteName.toLowerCase().includes(query.toLowerCase())),
-    [region, division, signal, query],
+    [overrideRows, region, division, signal, query],
   );
+  useListKeyNav(rows, selId, openObs);
 
   const showScopeTag = isAllRegions || isAllDivisions;
 
@@ -75,7 +85,7 @@ export function Observations() {
 
   return (
     <div>
-      <PageHead title="Observations" sub={`The full stream of field captures across every site in ${purviewPhrase(region, division)}. Filter, review and follow the ones that connect into a pattern.`} actions={<Btn variant="ghost" icon="download">Export CSV</Btn>} />
+      <PageHead title={title ?? 'Observations'} sub={sub ?? `The full stream of field captures across every site in ${purviewPhrase(region, division)}. Filter, review and follow the ones that connect into a pattern.`} actions={<Btn variant="ghost" icon="download">Export CSV</Btn>} />
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, marginBottom: 16, flexWrap: 'wrap' }}>
         <Pills
           value={signal}

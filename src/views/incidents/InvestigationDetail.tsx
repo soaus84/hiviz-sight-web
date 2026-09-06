@@ -5,8 +5,23 @@ import { INCIDENTS } from '@/data/incidents';
 import { energyLabel } from '@/data/observations';
 import { assignInvestigator, updateFrameworkFields, closeInvestigation, flagSystemicCause } from '@/data/investigations';
 import { USERS } from '@/data/users';
-import { INCIDENT_STATUS_DISPLAY, SEVERITY_DISPLAY } from './incidentDisplay';
-import type { ContributingFactor, CorrectiveAction, Investigation, InvestigationStatus, SharingScope } from '@/types';
+import { STOP_WORK_EVENTS_BY_ID } from '@/data/stopWork';
+import { INCIDENT_STATUS_DISPLAY, SEVERITY_DISPLAY, STOP_WORK_STATUS_DISPLAY } from './incidentDisplay';
+import type { ContributingFactor, CorrectiveAction, Incident, Investigation, InvestigationStatus, SharingScope } from '@/types';
+
+/** What to show for an incident's stop-work state, without leaving this
+ * screen — an investigator needs to know if the site is still stopped, not
+ * just what the incident's own status says. Checks the same three states
+ * SevereIncidentReview.tsx/IncidentDetail.tsx render, in the same order. */
+function stopWorkIndicator(i: Incident): { label: string; tone: Tone } | null {
+  if (i.stopWorkEventId) {
+    const e = STOP_WORK_EVENTS_BY_ID[i.stopWorkEventId];
+    if (e) return { label: `Stop work: ${STOP_WORK_STATUS_DISPLAY[e.status].label}${e.siteWide ? ' · Site-wide' : ''}`, tone: STOP_WORK_STATUS_DISPLAY[e.status].tone };
+  }
+  if (i.stopWorkDismissedBy) return { label: 'Stop work: Dismissed', tone: 'primary' };
+  if (i.stopWorkWarranted && !i.stopWorkCalled) return { label: 'Stop work: Needs decision', tone: 'error' };
+  return null;
+}
 
 const STATUS: Record<InvestigationStatus, [string, Tone]> = {
   open: ['Investigating', 'info'],
@@ -14,7 +29,7 @@ const STATUS: Record<InvestigationStatus, [string, Tone]> = {
 };
 
 const sectionLabel = { fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' as const, color: colors.inkSoft, margin: '22px 0 10px' };
-const fieldLabel = { display: 'block', fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, letterSpacing: 0.5, textTransform: 'uppercase' as const, color: colors.inkMuted, marginBottom: 5 };
+const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const textareaStyle = { width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.4, resize: 'vertical' as const, outline: 'none' };
 const inputStyle = { padding: '7px 9px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 12.5, outline: 'none' };
 
@@ -322,6 +337,7 @@ export function InvestigationDetail({ v, onOpenIncident, onChanged }: { v: Inves
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {srcIncidents.map((i) => {
           const status = INCIDENT_STATUS_DISPLAY[i.status];
+          const stopWork = stopWorkIndicator(i);
           return (
             <div
               key={i.id}
@@ -334,6 +350,7 @@ export function InvestigationDetail({ v, onOpenIncident, onChanged }: { v: Inves
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                   <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{i.siteName} · {i.when}</span>
                   <Badge tone={status.tone}>{status.label}</Badge>
+                  {stopWork && <Badge tone={stopWork.tone} outline icon="front_hand">{stopWork.label}</Badge>}
                 </div>
               </div>
               <Icon name="chevron_right" size={18} color={colors.inkMuted} style={{ marginTop: 2, flexShrink: 0 }} />

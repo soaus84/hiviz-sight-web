@@ -1,4 +1,4 @@
-import type { BarrierFailure, CriticalControl, Hazard, Likelihood, SeverityClass, WorksiteControl, WorksiteControlStatus } from '@/types';
+import type { BarrierFailure, CriticalControl, Hazard, Likelihood, SeverityClass, Site, WorksiteControl, WorksiteControlStatus } from '@/types';
 import { SITES } from './sites';
 import { BARRIER_FAILURES } from './barrierFailures';
 import { INCIDENTS } from './incidents';
@@ -293,6 +293,11 @@ export function combineRiskRating(severity: SeverityClass, likelihood: Likelihoo
   return RISK_RATING_MATRIX[severity][likelihood];
 }
 
+/** Shared ordering for every "worst of" comparison in this file and its
+ * views (site rollup here, and RiskDashboard's "highest risk work types"
+ * sort) — one rank table so the band order can't drift between them. */
+export const RATING_RANK: Record<SeverityClass, number> = { minor: 0, moderate: 1, serious: 2, critical: 3 };
+
 export interface WorkTypeRisk {
   /** Worst hazard severity defined for this work type. Null when no hazard
    * has been defined yet — there's nothing to rate. */
@@ -314,8 +319,7 @@ export interface WorkTypeRisk {
 export function computeWorkTypeRisk(workTypeId: string, sites = SITES): WorkTypeRisk {
   const hazards = HAZARDS.filter((h) => h.workTypeId === workTypeId);
   const severity = hazards.reduce<SeverityClass | null>((worst, h) => {
-    const rank: Record<SeverityClass, number> = { minor: 0, moderate: 1, serious: 2, critical: 3 };
-    return !worst || rank[h.severityClass] > rank[worst] ? h.severityClass : worst;
+    return !worst || RATING_RANK[h.severityClass] > RATING_RANK[worst] ? h.severityClass : worst;
   }, null);
 
   const siteIds = new Set(sites.map((s) => s.id));
@@ -333,4 +337,90 @@ export function computeWorkTypeRisk(workTypeId: string, sites = SITES): WorkType
   const rating = severity ? combineRiskRating(severity, likelihood) : null;
 
   return { severity, likelihood, eventCount, rating };
+}
+
+export interface SiteRisk {
+  rating: SeverityClass | null;
+  /** Which of the site's work types produced the rating — the one line
+   * "why is this site Critical" resolves to. */
+  worstWorkTypeId: string | null;
+}
+
+/** A site's risk score is the worst of its work types' ratings, not an
+ * average — a site is only as safe as its least-controlled work type, and
+ * an average would quietly bury that. Work types with no hazard defined yet
+ * don't contribute a rating (nothing to roll up) — that's a distinct
+ * problem from "rated but risky", surfaced instead on the Work Types list. */
+export function computeSiteRisk(site: Site): SiteRisk {
+  let best: SiteRisk = { rating: null, worstWorkTypeId: null };
+  for (const workTypeId of site.workTypeIds) {
+    const { rating } = computeWorkTypeRisk(workTypeId, [site]);
+    if (rating && (!best.rating || RATING_RANK[rating] > RATING_RANK[best.rating])) {
+      best = { rating, worstWorkTypeId: workTypeId };
+    }
+  }
+  return best;
+}
+
+/** WorksiteControls at a site that the site has already accepted
+ * (status = 'implementing') but hasn't finished rolling out to a full
+ * verification schedule (status = 'active') yet — see activateControl.
+ * Deliberately the only "coverage gap" surfaced at the site level: once a
+ * site has accepted a control, finishing the rollout is squarely theirs to
+ * own. A control that was simply never pushed here isn't counted — that
+ * gap may have a perfectly good reason and belongs upstream instead (Work
+ * Types list for "no hazard defined at all", HazardDetail's per-control
+ * "Push to N more sites" for "defined but not yet pushed here"). */
+export function implementingControlsCount(site: Site): number {
+  return WORKSITE_CONTROLS.filter((wc) => wc.siteId === site.id && wc.status === 'implementing').length;
+}
+
+// --- Control effectiveness: a control's own reliability track record ---
+//
+// Distinct from a hazard's risk rating (severity x likelihood, above): that
+// answers "how dangerous is this hazard right now", this answers "how often
+// does THIS specific control actually hold up when verified" — a control
+// can be reliable under a critical hazard, or unreliable under a minor one.
+// Same constraint as everywhere else in this file (top-of-file note): only
+// failures are logged, a passing verification isn't recorded as an event,
+// so effectiveness can only be read from failure frequency, not a true pass
+// rate. Reuses computeLikelihood's thresholds and 90-day window rather than
+// inventing a 4th "how often does this happen" scale.
+
+/** A control is only ever actually verified once it's active at a site
+ * (see WorksiteControlStatus's doc comment — "active: full verification
+ * schedule running"); pending_review/implementing/not_required instances
+ * have never been checked, so their failure count is structurally always
+ * 0. Without this, computeControlEffectiveness would read that 0 as a
+ * clean record ("Reliable") instead of what it actually is — no data yet. */
+const VERIFIED_STATUSES: WorksiteControlStatus[] = ['active', 'active_defeating', 'active_degraded'];
+
+export interface ControlEffectiveness {
+  failureCount: number;
+  /** Null when no relevant instance has ever reached an actively-verified
+   * status — nothing to score yet, not a clean record. */
+  likelihood: Likelihood | null;
+}
+
+/** The BarrierFailures behind a control's effectiveness score, most recent
+ * first — `siteId` narrows to one worksite's own instance (same control,
+ * same computation, just a smaller failure set) for the embedded view on a
+ * site's Controls page; omitted, it reads every site the control has been
+ * pushed to. */
+export function recentControlFailures(criticalControlId: string, siteId?: string): BarrierFailure[] {
+  const instanceIds = new Set(
+    WORKSITE_CONTROLS.filter((wc) => wc.criticalControlId === criticalControlId && (!siteId || wc.siteId === siteId)).map((wc) => wc.id),
+  );
+  const cutoff = new Date(MOCK_NOW_RISK.getTime() - LIKELIHOOD_WINDOW_DAYS * 86_400_000);
+  return BARRIER_FAILURES
+    .filter((b) => instanceIds.has(b.worksiteControlId) && new Date(b.flaggedAt) >= cutoff)
+    .sort((a, b) => new Date(b.flaggedAt).getTime() - new Date(a.flaggedAt).getTime());
+}
+
+export function computeControlEffectiveness(criticalControlId: string, siteId?: string): ControlEffectiveness {
+  const relevant = WORKSITE_CONTROLS.filter((wc) => wc.criticalControlId === criticalControlId && (!siteId || wc.siteId === siteId));
+  if (!relevant.some((wc) => VERIFIED_STATUSES.includes(wc.status))) return { failureCount: 0, likelihood: null };
+
+  const failureCount = recentControlFailures(criticalControlId, siteId).length;
+  return { failureCount, likelihood: computeLikelihood(failureCount) };
 }

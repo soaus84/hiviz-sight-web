@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
+import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { PageHead, Btn, Pills, Search, DataTable, Badge, Drawer, type Column } from '@/components';
 import { INCIDENTS, incidentInRegion } from '@/data/incidents';
 import { purviewPhrase } from '@/data/purview';
@@ -46,6 +47,7 @@ export function Incidents() {
   const rows = inRegion
     .filter((i) => status === 'all' || i.status === status)
     .filter((i) => !query || i.description.toLowerCase().includes(query.toLowerCase()) || i.siteName.toLowerCase().includes(query.toLowerCase()));
+  useListKeyNav(rows, selId, openIncident);
 
   const cols: Column<Incident>[] = [
     { key: 'id', label: 'ID', w: 96, mono: true, render: (r) => <span style={{ color: colors.inkSoft, fontWeight: 700 }}>{r.id}</span> },

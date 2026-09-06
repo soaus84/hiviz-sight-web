@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { Icon } from '@/components';
+import { Icon, Avatar } from '@/components';
 import { useActiveUser } from '@/state/ActiveUser';
 import { WORKSPACES, type Workspace } from './workspaces';
 
@@ -41,7 +41,7 @@ export function WorkspaceSwitcher({ active, collapsed, onNavigate }: WorkspaceSw
           cursor: 'pointer',
         }}
       >
-        <Icon name={active.icon} size={18} color={colors.hi} fill={1} />
+        {active.id === 'me' ? <Avatar name={user.name} size={22} tone={colors.hi} /> : <Icon name={active.icon} size={18} color={colors.hi} fill={1} />}
         {!collapsed && (
           <>
             <div style={{ flex: 1, minWidth: 0, textAlign: 'left' }}>
@@ -83,7 +83,7 @@ export function WorkspaceSwitcher({ active, collapsed, onNavigate }: WorkspaceSw
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 11, padding: '10px 14px', background: on ? colors.fill : 'transparent', border: 'none', cursor: 'pointer', textAlign: 'left' }}
                 >
                   <div style={{ width: 32, height: 32, borderRadius: 'var(--radius-md)', background: on ? colors.hi : colors.fill, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                    <Icon name={w.icon} size={17} color={on ? colors.hiInk : colors.inkSoft} />
+                    {w.id === 'me' ? <Avatar name={user.name} size={22} tone={on ? colors.hi : undefined} /> : <Icon name={w.icon} size={17} color={on ? colors.hiInk : colors.inkSoft} />}
                   </div>
                   <div style={{ flex: 1, minWidth: 0 }}>
                     <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 700, color: colors.ink }}>{w.label}</div>

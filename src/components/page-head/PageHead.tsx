@@ -3,7 +3,7 @@ import type { ReactNode } from 'react';
 
 export interface PageHeadProps {
   title: string;
-  sub?: string;
+  sub?: ReactNode;
   actions?: ReactNode;
 }
 
