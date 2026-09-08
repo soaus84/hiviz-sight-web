@@ -1,11 +1,14 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
 import { Card, Badge, Btn, AINote, Avatar, Icon, Toggle } from '@/components';
+import { AttnRow } from '@/views/shared/AttnRow';
 import { INCIDENTS } from '@/data/incidents';
 import { energyLabel } from '@/data/observations';
 import { assignInvestigator, updateFrameworkFields, closeInvestigation, flagSystemicCause } from '@/data/investigations';
 import { USERS } from '@/data/users';
 import { STOP_WORK_EVENTS_BY_ID } from '@/data/stopWork';
+import { INSIGHTS_BY_ID, INSIGHT_KIND_LABEL } from '@/data/insights';
 import { INCIDENT_STATUS_DISPLAY, SEVERITY_DISPLAY, STOP_WORK_STATUS_DISPLAY } from './incidentDisplay';
 import type { ContributingFactor, CorrectiveAction, Incident, Investigation, InvestigationStatus, SharingScope } from '@/types';
 
@@ -124,7 +127,13 @@ function ActionList({ actions, onAdd, onToggleDone, editable }: { actions: Corre
   );
 }
 
-export function InvestigationDetail({ v, onOpenIncident, onChanged }: { v: Investigation; onOpenIncident: (id: string) => void; onChanged?: () => void }) {
+/** `onOpenIncident`/`onOpenSystemicInsight` open the linked record as a
+ * nested drawer over this one instead of navigating away — omitted by
+ * whichever page renders this already-nested inside someone else's, so
+ * nesting never goes past one level deep. See StopWorkDrawer.tsx's own
+ * onOpenSource for the same rule in the other direction. */
+export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, onChanged }: { v: Investigation; onOpenIncident?: (id: string) => void; onOpenSystemicInsight?: (insightId: string) => void; onChanged?: () => void }) {
+  const navigate = useNavigate();
   const [sl, sh] = STATUS[v.status];
   const severity = SEVERITY_DISPLAY[v.severityClass];
   const srcIncidents = INCIDENTS.filter((i) => i.linkedInvestigationId === v.id);
@@ -283,13 +292,38 @@ export function InvestigationDetail({ v, onOpenIncident, onChanged }: { v: Inves
         </>
       )}
 
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Energy classification</div>
+      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+        {v.energyTypes.map((e, k) => <Badge key={k} tone={e === 'none' ? 'warning' : 'error'} outline>{energyLabel(e)}</Badge>)}
+      </div>
+
       {v.status === 'closed' && (
         <>
           <div style={sectionLabel}>Systemic cause phase</div>
           {v.systemicCauseInsightId ? (
-            <AINote title="Bridged to the Insight pipeline">
-              This investigation's findings were entered as a critical insight ({v.systemicCauseInsightId}) — visible now in the Insights workspace.
-            </AINote>
+            <>
+              <AINote title="Bridged to the Insight pipeline">
+                This investigation's findings were entered as a critical insight — visible now in the Insights workspace.
+              </AINote>
+              {(() => {
+                const insight = INSIGHTS_BY_ID[v.systemicCauseInsightId];
+                if (!insight) return null;
+                const [kindLabel, kindTone] = INSIGHT_KIND_LABEL[insight.kind];
+                return (
+                  <Card pad={4} style={{ marginTop: 10, boxShadow: 'none' }}>
+                    <AttnRow
+                      label={kindLabel}
+                      icon="lightbulb"
+                      tone={kindTone}
+                      title={insight.title}
+                      meta={insight.siteNames.join(', ')}
+                      last
+                      onClick={() => (onOpenSystemicInsight ? onOpenSystemicInsight(insight.id) : navigate(`/insights/${insight.id}`))}
+                    />
+                  </Card>
+                );
+              })()}
+            </>
           ) : v.legalHold ? (
             <Card pad={16} style={{ boxShadow: 'none', display: 'flex', alignItems: 'center', gap: 10 }}>
               <Icon name="lock" size={18} color={colors.red} />
@@ -323,11 +357,6 @@ export function InvestigationDetail({ v, onOpenIncident, onChanged }: { v: Inves
         </>
       )}
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Energy classification</div>
-      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-        {v.energyTypes.map((e, k) => <Badge key={k} tone={e === 'none' ? 'warning' : 'error'} outline>{energyLabel(e)}</Badge>)}
-      </div>
-
       <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px', display: 'flex', justifyContent: 'space-between' }}>
         <span>Source incidents</span><span style={{ color: colors.inkMuted }}>{srcIncidents.length}</span>
       </div>
@@ -342,9 +371,12 @@ export function InvestigationDetail({ v, onOpenIncident, onChanged }: { v: Inves
             <div
               key={i.id}
               className="a-card-int"
-              onClick={() => onOpenIncident(i.id)}
+              onClick={() => (onOpenIncident ? onOpenIncident(i.id) : navigate(`/incidents?id=${i.id}`))}
               style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10 }}
             >
+              <div style={{ width: 34, height: 34, borderRadius: 'var(--radius-md)', background: colors.fill, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="report" size={17} color={colors.inkSoft} />
+              </div>
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>"{i.description}"</div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>

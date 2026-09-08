@@ -1,6 +1,8 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { Card, Badge, Btn, AINote, Fact, Toggle } from '@/components';
+import { AttnRow } from '@/views/shared/AttnRow';
 import { useActiveUser } from '@/state/ActiveUser';
 import { CRITICAL_CONTROLS_BY_ID, WORKSITE_CONTROLS_BY_ID } from '@/data/risk';
 import { resolveDirectly, submitForReview, approve, returnForRevision, sentBackCount, formatWhen, BARRIER_FAILURES_BY_ID } from '@/data/barrierFailures';
@@ -31,7 +33,12 @@ function buildTimeline(b: BarrierFailure) {
   return b.rounds.map((r) => ({ label: ROUND_LABEL[r.kind], by: r.by, at: r.at, note: r.note }));
 }
 
+/** A leaf in this app's linked-entity graph (see [[project_linked_entity_pattern]])
+ * — its Stop Work reference card always jumps to the full page rather than
+ * nesting a drawer over this one; only a hub ever nests a leaf's reference,
+ * never the reverse. */
 export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onChanged?: () => void }) {
+  const navigate = useNavigate();
   const { user } = useActiveUser();
   const status = BARRIER_FAILURE_STATUS_DISPLAY[b.status];
   const severity = SEVERITY_DISPLAY[b.severityClass];
@@ -42,6 +49,8 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
   const [resolveError, setResolveError] = useState<string | null>(null);
   const [sendBackOpen, setSendBackOpen] = useState(false);
   const [sendBackReason, setSendBackReason] = useState('');
+  const [stopWorkIntent, setStopWorkIntent] = useState<'dismiss' | 'call' | null>(null);
+  const [confirmSiteWide, setConfirmSiteWide] = useState(false);
   const [swNote, setSwNote] = useState('');
   const [siteWide, setSiteWide] = useState(false);
   // A stop-work decision replaces the BarrierFailure object in place
@@ -83,13 +92,15 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
   const stopWorkEvent = live.stopWorkEventId ? STOP_WORK_EVENTS_BY_ID[live.stopWorkEventId] : undefined;
   const needsStopWorkDecision = live.stopWorkWarranted && !live.stopWorkCalled && !live.stopWorkDismissedBy;
   const handleCallStopWork = () => {
-    callStopWork('barrierFailure', b.id, user.name, siteWide);
+    callStopWork('barrierFailure', b.id, user.name, siteWide, swNote.trim() || undefined);
+    setStopWorkIntent(null); setSwNote(''); setSiteWide(false); setConfirmSiteWide(false);
     forceRender((v) => v + 1);
     onChanged?.();
   };
   const handleDismissStopWork = () => {
     if (!swNote.trim()) return;
     dismissStopWorkWarning('barrierFailure', b.id, user.name, swNote.trim());
+    setStopWorkIntent(null); setSwNote('');
     forceRender((v) => v + 1);
     onChanged?.();
   };
@@ -123,16 +134,49 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft }}>This control failure was flagged as warranting a stop — nobody called one.</span>
           </div>
           {live.stopWorkWarrantedRationale && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>{live.stopWorkWarrantedRationale}</div>}
-          <label style={fieldLabel}>Note</label>
-          <textarea className="a-input" value={swNote} onChange={(e) => setSwNote(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 12 }} placeholder="Only needed to dismiss — why this doesn't warrant a stop…" />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600 }}>Site-wide stop</span>
-            <Toggle checked={siteWide} onChange={setSiteWide} />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Btn variant="ghost" size="sm" disabled={!swNote.trim()} onClick={handleDismissStopWork}>Dismiss</Btn>
-            <Btn variant="danger" size="sm" icon="front_hand" onClick={handleCallStopWork}>Request stop work</Btn>
-          </div>
+          {stopWorkIntent === null && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Btn variant="ghost" size="sm" onClick={() => setStopWorkIntent('dismiss')}>Dismiss</Btn>
+              <Btn variant="danger" size="sm" icon="front_hand" onClick={() => setStopWorkIntent('call')}>Request stop work</Btn>
+            </div>
+          )}
+          {stopWorkIntent === 'dismiss' && (
+            <>
+              <label style={fieldLabel}>Why doesn't this warrant a stop?</label>
+              <textarea className="a-input" autoFocus value={swNote} onChange={(e) => setSwNote(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 12 }} placeholder="Isolated fault, already contained…" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn variant="ghost" size="sm" onClick={() => { setStopWorkIntent(null); setSwNote(''); }}>Cancel</Btn>
+                <Btn variant="primary" size="sm" disabled={!swNote.trim()} onClick={handleDismissStopWork}>Dismiss</Btn>
+              </div>
+            </>
+          )}
+          {stopWorkIntent === 'call' && !confirmSiteWide && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600 }}>Site-wide stop</span>
+                <Toggle checked={siteWide} onChange={setSiteWide} />
+              </div>
+              <label style={fieldLabel}>Instruction (optional)</label>
+              <textarea className="a-input" autoFocus value={swNote} onChange={(e) => setSwNote(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 12 }} placeholder="Anything site needs to know before stopping…" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn variant="ghost" size="sm" onClick={() => { setStopWorkIntent(null); setSwNote(''); setSiteWide(false); }}>Cancel</Btn>
+                <Btn variant="danger" size="sm" icon="front_hand" onClick={() => (siteWide ? setConfirmSiteWide(true) : handleCallStopWork())}>
+                  {siteWide ? 'Request stop work — site-wide' : 'Request stop work'}
+                </Btn>
+              </div>
+            </>
+          )}
+          {stopWorkIntent === 'call' && confirmSiteWide && (
+            <>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+                This stops all work at {b.siteName} — not just {b.controlName}. Confirm that's intended before it goes out.
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn variant="ghost" size="sm" onClick={() => setConfirmSiteWide(false)}>Back</Btn>
+                <Btn variant="danger" size="sm" icon="front_hand" onClick={handleCallStopWork}>Confirm site-wide stop</Btn>
+              </div>
+            </>
+          )}
         </Card>
       )}
       {live.stopWorkDismissedBy && !stopWorkEvent && (
@@ -142,13 +186,6 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 8 }}>— {live.stopWorkDismissedBy}</div>
         </Card>
       )}
-      {stopWorkEvent && (
-        <div className="a-card-int" style={{ marginTop: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Badge tone={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].tone} outline icon="front_hand">{STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].label}</Badge>
-          {stopWorkEvent.siteWide && <Badge tone="error" outline>Site-wide</Badge>}
-        </div>
-      )}
-
       {b.status === 'open' && (
         <div style={{ marginTop: 16 }}>
           {!resolveOpen ? (
@@ -263,6 +300,23 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
         <Fact k="Control type" v={CONTROL_TYPE_LABEL[b.controlType]} />
         <Fact k="Hazard" v={b.hazardName} last />
       </Card>
+
+      {stopWorkEvent && (
+        <>
+          <div style={{ ...sectionLabel, margin: '16px 0 10px' }}>Stop work</div>
+          <Card pad={4} style={{ boxShadow: 'none' }}>
+            <AttnRow
+              label={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].label}
+              icon="front_hand"
+              tone={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].tone}
+              title={stopWorkEvent.workType}
+              meta={`${stopWorkEvent.siteName}${stopWorkEvent.siteWide ? ' · Site-wide' : ''}`}
+              last external
+              onClick={() => navigate(`/incidents/stop-work?id=${stopWorkEvent.id}`)}
+            />
+          </Card>
+        </>
+      )}
     </Card>
   );
 }

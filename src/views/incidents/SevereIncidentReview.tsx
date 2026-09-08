@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { Card, Badge, Btn, AINote, Avatar, Toggle } from '@/components';
+import { AttnRow } from '@/views/shared/AttnRow';
 import { energyLabel } from '@/data/observations';
 import { acknowledgeIncident, progressToInvestigation, INCIDENTS_BY_ID } from '@/data/incidents';
 import { useActiveUser } from '@/state/ActiveUser';
@@ -11,6 +12,7 @@ import type { Incident } from '@/types';
 
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const textareaStyle = { width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.4, resize: 'vertical' as const, outline: 'none' };
+const sectionLabel = { fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' as const, color: colors.inkSoft, margin: '22px 0 10px' };
 
 /** The review-stage twin of InvestigationDetail — same Card shell, badge
  * row, title, and action-bar rhythm, so switching between the "Needs
@@ -21,7 +23,12 @@ const textareaStyle = { width: '100%', padding: '8px 10px', borderRadius: 'var(-
  * record exists yet to read a story from. Only ever renders a 'severe'
  * incident (Investigations.tsx only routes severe incidents here) — the
  * acknowledged/linked follow-up states are covered by the drawer variant,
- * IncidentDetail, used everywhere else an incident of any status is opened. */
+ * IncidentDetail, used everywhere else an incident of any status is opened.
+ *
+ * A leaf in this app's linked-entity graph (see [[project_linked_entity_pattern]])
+ * — its Stop Work reference card always jumps to the full page rather than
+ * nesting a drawer over this one; only a hub ever nests a leaf's reference,
+ * never the reverse. */
 export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?: () => void }) {
   const navigate = useNavigate();
   const { user } = useActiveUser();
@@ -29,6 +36,8 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
   const severity = SEVERITY_DISPLAY[i.severityClass];
   const [ackOpen, setAckOpen] = useState(false);
   const [ackComment, setAckComment] = useState('');
+  const [stopWorkIntent, setStopWorkIntent] = useState<'dismiss' | 'call' | null>(null);
+  const [confirmSiteWide, setConfirmSiteWide] = useState(false);
   const [swNote, setSwNote] = useState('');
   const [siteWide, setSiteWide] = useState(false);
   // Neither a stop-work decision (recorded on the Incident itself, but via
@@ -53,13 +62,15 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
   const stopWorkEvent = live.stopWorkEventId ? STOP_WORK_EVENTS_BY_ID[live.stopWorkEventId] : undefined;
   const needsStopWorkDecision = live.stopWorkWarranted && !live.stopWorkCalled && !live.stopWorkDismissedBy;
   const handleCallStopWork = () => {
-    callStopWork('incident', i.id, user.name, siteWide);
+    callStopWork('incident', i.id, user.name, siteWide, swNote.trim() || undefined);
+    setStopWorkIntent(null); setSwNote(''); setSiteWide(false); setConfirmSiteWide(false);
     forceRender((v) => v + 1);
     onChanged?.();
   };
   const handleDismissStopWork = () => {
     if (!swNote.trim()) return;
     dismissStopWorkWarning('incident', i.id, user.name, swNote.trim());
+    setStopWorkIntent(null); setSwNote('');
     forceRender((v) => v + 1);
     onChanged?.();
   };
@@ -85,16 +96,49 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
             <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft }}>AI flagged this as warranting a stop — nobody called one.</span>
           </div>
           {live.stopWorkWarrantedRationale && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>{live.stopWorkWarrantedRationale}</div>}
-          <label style={fieldLabel}>Note</label>
-          <textarea className="a-input" value={swNote} onChange={(e) => setSwNote(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 12 }} placeholder="Only needed to dismiss — why this doesn't warrant a stop…" />
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600 }}>Site-wide stop</span>
-            <Toggle checked={siteWide} onChange={setSiteWide} />
-          </div>
-          <div style={{ display: 'flex', gap: 8 }}>
-            <Btn variant="ghost" size="sm" disabled={!swNote.trim()} onClick={handleDismissStopWork}>Dismiss</Btn>
-            <Btn variant="danger" size="sm" icon="front_hand" onClick={handleCallStopWork}>Request stop work</Btn>
-          </div>
+          {stopWorkIntent === null && (
+            <div style={{ display: 'flex', gap: 8 }}>
+              <Btn variant="ghost" size="sm" onClick={() => setStopWorkIntent('dismiss')}>Dismiss</Btn>
+              <Btn variant="danger" size="sm" icon="front_hand" onClick={() => setStopWorkIntent('call')}>Request stop work</Btn>
+            </div>
+          )}
+          {stopWorkIntent === 'dismiss' && (
+            <>
+              <label style={fieldLabel}>Why doesn't this warrant a stop?</label>
+              <textarea className="a-input" autoFocus value={swNote} onChange={(e) => setSwNote(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 12 }} placeholder="Isolated fault, already contained…" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn variant="ghost" size="sm" onClick={() => { setStopWorkIntent(null); setSwNote(''); }}>Cancel</Btn>
+                <Btn variant="primary" size="sm" disabled={!swNote.trim()} onClick={handleDismissStopWork}>Dismiss</Btn>
+              </div>
+            </>
+          )}
+          {stopWorkIntent === 'call' && !confirmSiteWide && (
+            <>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600 }}>Site-wide stop</span>
+                <Toggle checked={siteWide} onChange={setSiteWide} />
+              </div>
+              <label style={fieldLabel}>Instruction (optional)</label>
+              <textarea className="a-input" autoFocus value={swNote} onChange={(e) => setSwNote(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 12 }} placeholder="Anything site needs to know before stopping…" />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn variant="ghost" size="sm" onClick={() => { setStopWorkIntent(null); setSwNote(''); setSiteWide(false); }}>Cancel</Btn>
+                <Btn variant="danger" size="sm" icon="front_hand" onClick={() => (siteWide ? setConfirmSiteWide(true) : handleCallStopWork())}>
+                  {siteWide ? 'Request stop work — site-wide' : 'Request stop work'}
+                </Btn>
+              </div>
+            </>
+          )}
+          {stopWorkIntent === 'call' && confirmSiteWide && (
+            <>
+              <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5, marginBottom: 12 }}>
+                This stops all work at {i.siteName} — not just {i.workType}. Confirm that's intended before it goes out.
+              </div>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <Btn variant="ghost" size="sm" onClick={() => setConfirmSiteWide(false)}>Back</Btn>
+                <Btn variant="danger" size="sm" icon="front_hand" onClick={handleCallStopWork}>Confirm site-wide stop</Btn>
+              </div>
+            </>
+          )}
         </Card>
       )}
       {live.stopWorkDismissedBy && !stopWorkEvent && (
@@ -106,18 +150,6 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 8 }}>— {live.stopWorkDismissedBy}</div>
         </Card>
       )}
-      {stopWorkEvent && (
-        <div
-          className="a-card-int"
-          onClick={() => navigate('/incidents/stop-work')}
-          style={{ marginTop: 14, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer' }}
-        >
-          <Badge tone={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].tone} outline icon="front_hand">{STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].label}</Badge>
-          {stopWorkEvent.siteWide && <Badge tone="error" outline>Site-wide</Badge>}
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, textDecoration: 'underline' }}>View in Stop Work</span>
-        </div>
-      )}
-
       <div style={{ marginTop: 14, background: colors.fill, borderRadius: 'var(--radius-lg)', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           <Avatar name={i.reporterName} size={26} />
@@ -146,10 +178,10 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
         </Card>
       )}
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>The story</div>
+      <div style={sectionLabel}>The story</div>
       <AINote title="What was reported">{i.description}</AINote>
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Detail</div>
+      <div style={sectionLabel}>Detail</div>
       <Card pad={16} style={{ boxShadow: 'none' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.6 }}>
           <div><strong>Work type:</strong> {i.workType}</div>
@@ -158,10 +190,27 @@ export function SevereIncidentReview({ i, onChanged }: { i: Incident; onChanged?
         </div>
       </Card>
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Energy classification</div>
+      <div style={sectionLabel}>Energy classification</div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
         <Badge tone={i.energyType === 'none' ? 'warning' : 'error'} outline>{energyLabel(i.energyType)}</Badge>
       </div>
+
+      {stopWorkEvent && (
+        <>
+          <div style={sectionLabel}>Stop work</div>
+          <Card pad={4} style={{ boxShadow: 'none' }}>
+            <AttnRow
+              label={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].label}
+              icon="front_hand"
+              tone={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].tone}
+              title={stopWorkEvent.workType}
+              meta={`${stopWorkEvent.siteName}${stopWorkEvent.siteWide ? ' · Site-wide' : ''}`}
+              last external
+              onClick={() => navigate(`/incidents/stop-work?id=${stopWorkEvent.id}`)}
+            />
+          </Card>
+        </>
+      )}
     </Card>
   );
 }

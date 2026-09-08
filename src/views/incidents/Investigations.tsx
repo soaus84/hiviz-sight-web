@@ -14,6 +14,11 @@ import { SevereIncidentReview } from './SevereIncidentReview';
 import { SevereIncidentCard } from './SevereIncidentCard';
 import { InvestigationsBoard } from './InvestigationsBoard';
 import { IncidentDetail } from './IncidentDetail';
+import { INSIGHTS_BY_ID } from '@/data/insights';
+import { InsightDetail } from '@/views/insights/InsightDetail';
+import { ObsDetail } from '@/views/observations/ObsDetail';
+import { OBSERVATIONS } from '@/data/observations';
+import { DrawerPanel } from '@/views/shared/DrawerPanel';
 import { insightsFitToHeight, type InsightsView } from '@/views/insights/insightsLayout';
 import type { Incident, Investigation } from '@/types';
 
@@ -144,6 +149,15 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
     setParams(next);
   };
 
+  // InvestigationDetail's one hub-to-hub reference (its systemic-cause
+  // Insight) — Insight then still gets to reach its own leaf (Observation)
+  // one level further. Nothing else nests here: SevereIncidentReview's Stop
+  // Work reference is a leaf's own outbound link, so it always jumps to the
+  // full page instead — see [[project_linked_entity_pattern]].
+  const [nestedInsightId, setNestedInsightId] = useState<string | null>(null);
+  const [nestedObsId, setNestedObsId] = useState<string | null>(null);
+  const closeNestedInsight = () => { setNestedInsightId(null); setNestedObsId(null); };
+
   const singleColumn = breakpoint !== 'desktop';
   const sel = selIncident?.status === 'severe' ? selIncident : selInvestigation;
   const showList = !singleColumn || !sel;
@@ -213,7 +227,13 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
             <div style={{ overflowY: fitToHeight ? 'auto' : undefined, minHeight: fitToHeight ? 0 : undefined }}>
               {selIncident?.status === 'severe'
                 ? <SevereIncidentReview key={selIncident.id} i={selIncident} onChanged={handleIncidentChanged} />
-                : selInvestigation && <InvestigationDetail key={selInvestigation.id} v={selInvestigation} onOpenIncident={openIncidentDrawer} onChanged={handleInvestigationChanged} />}
+                : selInvestigation && (
+                  <InvestigationDetail
+                    key={selInvestigation.id} v={selInvestigation} onChanged={handleInvestigationChanged}
+                    onOpenIncident={openIncidentDrawer}
+                    onOpenSystemicInsight={setNestedInsightId}
+                  />
+                )}
             </div>
           )}
         </div>
@@ -221,6 +241,25 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
 
       <Drawer open={!!selIncDrawer} onClose={closeIncidentDrawer}>
         {selIncDrawer && <IncidentDetail i={selIncDrawer} onClose={closeIncidentDrawer} />}
+      </Drawer>
+
+      {nestedInsightId && (() => {
+        const insight = INSIGHTS_BY_ID[nestedInsightId];
+        return (
+          <Drawer open={!!insight} onClose={closeNestedInsight}>
+            {insight && (
+              <DrawerPanel title={insight.title} id={insight.id} fullRecordPath={`/insights/${insight.id}`} onClose={closeNestedInsight}>
+                <InsightDetail i={insight} onOpenObservation={setNestedObsId} />
+              </DrawerPanel>
+            )}
+          </Drawer>
+        );
+      })()}
+      <Drawer open={!!nestedObsId} onClose={() => setNestedObsId(null)}>
+        {(() => {
+          const obs = nestedObsId ? OBSERVATIONS.find((o) => o.id === nestedObsId) : undefined;
+          return obs && <ObsDetail o={obs} onClose={() => setNestedObsId(null)} />;
+        })()}
       </Drawer>
     </div>
   );

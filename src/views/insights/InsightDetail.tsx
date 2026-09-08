@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
 import { Card, Badge, Btn, LinkBtn, AINote, Avatar, Icon, ListRow } from '@/components';
 import { OBSERVATIONS, SIGNAL_DISPLAY, energyLabel } from '@/data/observations';
@@ -132,7 +133,13 @@ function AssigneeMenu({ open, onClose, onSelect }: { open: boolean; onClose: () 
   );
 }
 
-export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Insight; onOpenObservation: (obsId: string) => void; onStatusChange?: () => void }) {
+/** `onOpenObservation` opens the linked Observation as a nested drawer over
+ * this one instead of navigating away — omitted by whichever page renders
+ * this already-nested inside someone else's, so nesting never goes past one
+ * level deep. See StopWorkDrawer.tsx's own onOpenSource for the same rule
+ * in the other direction. */
+export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Insight; onOpenObservation?: (obsId: string) => void; onStatusChange?: () => void }) {
+  const navigate = useNavigate();
   const { user } = useActiveUser();
   const hasDetail = !!i.suggested;
   // Prefer observations explicitly linked to this insight; only a handful of
@@ -320,32 +327,6 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
         {i.energyTypes.map((e, k) => <Badge key={k} tone={e === 'none' ? 'warning' : 'error'} outline>{energyLabel(e)}</Badge>)}
       </div>
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Source observations</span><span style={{ color: colors.inkMuted }}>{srcObs.length}</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {srcObs.map((o) => {
-          const s = SIGNAL_DISPLAY[o.signal_type];
-          return (
-            <div
-              key={o.id}
-              className="a-card-int"
-              onClick={() => onOpenObservation(o.id)}
-              style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10 }}
-            >
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>“{o.summary}”</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{o.siteName} · {o.when}</span>
-                  <Badge tone={s.tone}>{s.label}</Badge>
-                </div>
-              </div>
-              <Icon name="chevron_right" size={18} color={colors.inkMuted} style={{ marginTop: 2, flexShrink: 0 }} />
-            </div>
-          );
-        })}
-      </div>
-
       {hasDetail && (
         <>
           <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Forge Works Map® classification</div>
@@ -410,6 +391,35 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
           </div>
         </Card>
       )}
+
+      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px', display: 'flex', justifyContent: 'space-between' }}>
+        <span>Source observations</span><span style={{ color: colors.inkMuted }}>{srcObs.length}</span>
+      </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {srcObs.map((o) => {
+          const s = SIGNAL_DISPLAY[o.signal_type];
+          return (
+            <div
+              key={o.id}
+              className="a-card-int"
+              onClick={() => (onOpenObservation ? onOpenObservation(o.id) : navigate(`/observations?id=${o.id}`))}
+              style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10 }}
+            >
+              <div style={{ width: 34, height: 34, borderRadius: 'var(--radius-md)', background: colors.fill, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <Icon name="visibility" size={17} color={colors.inkSoft} />
+              </div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>“{o.summary}”</div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{o.siteName} · {o.when}</span>
+                  <Badge tone={s.tone}>{s.label}</Badge>
+                </div>
+              </div>
+              <Icon name="chevron_right" size={18} color={colors.inkMuted} style={{ marginTop: 2, flexShrink: 0 }} />
+            </div>
+          );
+        })}
+      </div>
     </Card>
   );
 }

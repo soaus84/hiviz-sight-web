@@ -1,9 +1,7 @@
 import { useState } from 'react';
-import type { ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
 import type { Tone } from '@/tokens';
-import { PageHead, Card, Eyebrow, Pills, Drawer, IconBtn, LinkBtn } from '@/components';
+import { PageHead, Card, Eyebrow, Pills, Drawer } from '@/components';
 import { useActiveUser } from '@/state/ActiveUser';
 import { usePurviewScope } from '@/state/PurviewScope';
 import { useListKeyNav } from '@/hooks/useListKeyNav';
@@ -17,6 +15,7 @@ import { STOP_WORK_EVENTS_BY_ID } from '@/data/stopWork';
 import { VISITS } from '@/data/visits';
 import { OBSERVATIONS } from '@/data/observations';
 import { AttnRow } from '@/views/shared/AttnRow';
+import { DrawerPanel } from '@/views/shared/DrawerPanel';
 import { SEVERITY_DISPLAY as INCIDENT_SEVERITY_DISPLAY, STOP_WORK_STATUS_DISPLAY } from '@/views/incidents/incidentDisplay';
 import { SEVERITY_DISPLAY as RISK_SEVERITY_DISPLAY } from '@/views/risk/riskDisplay';
 import { InsightDetail } from '@/views/insights/InsightDetail';
@@ -25,6 +24,7 @@ import { SevereIncidentReview } from '@/views/incidents/SevereIncidentReview';
 import { IncidentDetail } from '@/views/incidents/IncidentDetail';
 import { BarrierFailureDetail } from '@/views/risk/BarrierFailureDetail';
 import { StopWorkDrawer } from '@/views/incidents/StopWorkDrawer';
+import { VisitDrawerPanel } from '@/views/visits/VisitDrawerPanel';
 import { ObsDetail } from '@/views/observations/ObsDetail';
 
 // One pill per module's own main critical pipeline, not one per hidden
@@ -61,31 +61,15 @@ const SOURCE_LABEL: Record<Source, string> = {
 // components that have never needed a header/close button before (because
 // they've only ever lived in a split-pane), a thin DrawerPanel wrapper —
 // see below.
-type DrawerKind = 'incident' | 'investigation' | 'insight' | 'barrierFailure' | 'stopwork';
+type DrawerKind = 'incident' | 'investigation' | 'insight' | 'barrierFailure' | 'stopwork' | 'visit';
 interface OpenDrawer { kind: DrawerKind; id: string }
-
-/** A visit or a resolved item has nothing left to reach for, so Focus never
- * needs the escape hatch there — but Insight/Investigation/BarrierFailure
- * have real multi-record pages (board view, siblings, filters) worth
- * reaching for beyond just this one record. */
-function DrawerPanel({ title, id, fullRecordPath, onClose, children }: { title: string; id: string; fullRecordPath: string; onClose: () => void; children: ReactNode }) {
-  const navigate = useNavigate();
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '18px 22px', borderBottom: `1px solid ${colors.rule}` }}>
-        <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 15, fontWeight: 700, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</div>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 2 }}>{id}</div>
-        </div>
-        <LinkBtn size="sm" icon="open_in_new" onClick={() => navigate(fullRecordPath)}>Full record</LinkBtn>
-        <IconBtn name="close" onClick={onClose} />
-      </div>
-      <div className="a-scroll" style={{ flex: 1, overflowY: 'auto', padding: 22 }}>
-        {children}
-      </div>
-    </>
-  );
-}
+// A leaf (Incident, BarrierFailure, Observation) never offers to nest
+// anything — its own linked-entity cards always jump to the full page
+// instead (see IncidentDetail.tsx/BarrierFailureDetail.tsx). Only a hub
+// (Investigation, Insight, StopWork) ever nests a leaf's reference, and
+// since a leaf can't loop back, that's the whole safety story — no
+// per-render-site "is this primary or nested" bookkeeping needed. See
+// [[project_linked_entity_pattern]].
 
 /** The one page every persona lands on regardless of which workspaces are
  * in play for a client (all of them, in this prototype — see
@@ -96,13 +80,19 @@ function DrawerPanel({ title, id, fullRecordPath, onClose, children }: { title: 
  * source of truth this page and the Focus nav item's badge count both read,
  * so they can't disagree. */
 export function MyWorkspace() {
-  const navigate = useNavigate();
   const { user } = useActiveUser();
   const { region, division } = usePurviewScope();
   const purview = { region, division };
   const [filter, setFilter] = useState<'all' | Source>('all');
   const [drawer, setDrawer] = useState<OpenDrawer | null>(null);
-  const [nestedIncidentId, setNestedIncidentId] = useState<string | null>(null);
+  // Whatever a primary drawer's own hub reference opened — a leaf (Incident,
+  // BarrierFailure) it's terminal; Insight or Observation can go one level
+  // further still (nestedObsId below), since Insight's the one hub that can
+  // land here.
+  const [nested, setNested] = useState<{ kind: 'incident' | 'barrierFailure' | 'insight' | 'observation'; id: string } | null>(null);
+  // Only reachable from a nested Insight's own source-observation reference
+  // — the one hub-inside-a-hub case (Investigation's systemic-cause Insight,
+  // itself nested, still reaching its own leaf).
   const [nestedObsId, setNestedObsId] = useState<string | null>(null);
   // Arrow keys move this; Enter/Space opens whatever's currently
   // highlighted — decoupled, since unlike the split-pane/table+drawer
@@ -116,7 +106,13 @@ export function MyWorkspace() {
   const [, bump] = useState(0);
   const refresh = () => bump((v) => v + 1);
 
-  const closeDrawer = () => { setDrawer(null); setNestedIncidentId(null); setNestedObsId(null); };
+  // Clears the keyboard cursor too — unlike an inbox, where the list stays
+  // visible next to an ever-open detail pane (so keeping your place there
+  // makes sense), Focus's detail is an overlay that goes away entirely on
+  // close. Once it's gone there's nothing left for a lingering ring to
+  // anchor to, so it doesn't persist one.
+  const closeDrawer = () => { setDrawer(null); setNested(null); setNestedObsId(null); setFocusedId(null); };
+  const closeNested = () => { setNested(null); setNestedObsId(null); };
 
   const focus = computeFocusItems(purview, user.name);
   const decisions: DecisionItem[] = [];
@@ -156,7 +152,7 @@ export function MyWorkspace() {
     decisions.push({ id: `ins-${i.id}`, source: 'insight', tone, label: `Insight · ${label}`, title: i.title, meta: `${i.siteNames.join(', ')} · Unassigned`, onClick: () => setDrawer({ kind: 'insight', id: i.id }) });
   }
   for (const v of VISITS.filter((v) => v.visitor === user.name && (v.state === 'live' || v.state === 'upcoming'))) {
-    decisions.push({ id: `visit-${v.id}`, source: 'visit', tone: v.state === 'live' ? 'error' : 'info', label: `Visit · ${v.state === 'live' ? 'Live now' : 'Upcoming'}`, title: v.siteName, meta: v.when, onClick: () => navigate(`/visits/${v.id}`) });
+    decisions.push({ id: `visit-${v.id}`, source: 'visit', tone: v.state === 'live' ? 'error' : 'info', label: `Visit · ${v.state === 'live' ? 'Live now' : 'Upcoming'}`, title: v.siteName, meta: v.when, onClick: () => setDrawer({ kind: 'visit', id: v.id }) });
   }
 
   const filtered = filter === 'all' ? decisions : decisions.filter((d) => d.source === filter);
@@ -165,7 +161,16 @@ export function MyWorkspace() {
   // Suspended while any drawer is open — arrows shouldn't silently move the
   // highlight behind it. Activating (Enter/Space) just calls the same
   // onClick a click would, so it never drifts from what clicking does.
-  useListKeyNav(filtered, focusedId, setFocusedId, !drawer, (id) => filtered.find((d) => d.id === id)?.onClick());
+  // Arrows always move the ring; if a drawer's already open they also drive
+  // it forward/back to follow — same "keep paging while the detail follows"
+  // behaviour as every other list+detail page, just via a separate piece of
+  // state instead of one shared selId, since Focus's rows have no inline
+  // pane of their own to already be reacting to selection.
+  const moveFocus = (id: string) => {
+    setFocusedId(id);
+    if (drawer) filtered.find((d) => d.id === id)?.onClick();
+  };
+  useListKeyNav(filtered, focusedId, moveFocus, true, (id) => filtered.find((d) => d.id === id)?.onClick());
 
   // Incident-kind opens either SevereIncidentReview (still 'severe' — the
   // stop-work fork lives right there too, so the two Focus rows that can
@@ -178,8 +183,12 @@ export function MyWorkspace() {
   const insightDrawer = drawer?.kind === 'insight' ? INSIGHTS_BY_ID[drawer.id] : undefined;
   const barrierFailureDrawer = drawer?.kind === 'barrierFailure' ? BARRIER_FAILURES_BY_ID[drawer.id] : undefined;
   const stopWorkDrawerEvent = drawer?.kind === 'stopwork' ? STOP_WORK_EVENTS_BY_ID[drawer.id] : undefined;
-  const nestedIncident = nestedIncidentId ? INCIDENTS_BY_ID[nestedIncidentId] : undefined;
-  const nestedObs = nestedObsId ? OBSERVATIONS.find((o) => o.id === nestedObsId) : undefined;
+  const visitDrawer = drawer?.kind === 'visit' ? VISITS.find((v) => v.id === drawer.id) : undefined;
+  const nestedIncident = nested?.kind === 'incident' ? INCIDENTS_BY_ID[nested.id] : undefined;
+  const nestedBarrierFailure = nested?.kind === 'barrierFailure' ? BARRIER_FAILURES_BY_ID[nested.id] : undefined;
+  const nestedInsight = nested?.kind === 'insight' ? INSIGHTS_BY_ID[nested.id] : undefined;
+  const nestedObs = nested?.kind === 'observation' ? OBSERVATIONS.find((o) => o.id === nested.id) : undefined;
+  const nestedLeafObs = nestedObsId ? OBSERVATIONS.find((o) => o.id === nestedObsId) : undefined;
 
   const handleIncidentChanged = () => {
     refresh();
@@ -228,7 +237,11 @@ export function MyWorkspace() {
       <Drawer open={!!investigationDrawer} onClose={closeDrawer}>
         {investigationDrawer && (
           <DrawerPanel title={investigationDrawer.title} id={investigationDrawer.id} fullRecordPath={`/investigations/${investigationDrawer.id}`} onClose={closeDrawer}>
-            <InvestigationDetail v={investigationDrawer} onOpenIncident={(id) => setNestedIncidentId(id)} onChanged={refresh} />
+            <InvestigationDetail
+              v={investigationDrawer} onChanged={refresh}
+              onOpenIncident={(id) => setNested({ kind: 'incident', id })}
+              onOpenSystemicInsight={(id) => setNested({ kind: 'insight', id })}
+            />
           </DrawerPanel>
         )}
       </Drawer>
@@ -236,7 +249,7 @@ export function MyWorkspace() {
       <Drawer open={!!insightDrawer} onClose={closeDrawer}>
         {insightDrawer && (
           <DrawerPanel title={insightDrawer.title} id={insightDrawer.id} fullRecordPath={`/insights/${insightDrawer.id}`} onClose={closeDrawer}>
-            <InsightDetail i={insightDrawer} onOpenObservation={(id) => setNestedObsId(id)} onStatusChange={refresh} />
+            <InsightDetail i={insightDrawer} onOpenObservation={(id) => setNested({ kind: 'observation', id })} onStatusChange={refresh} />
           </DrawerPanel>
         )}
       </Drawer>
@@ -249,14 +262,49 @@ export function MyWorkspace() {
         )}
       </Drawer>
 
-      {stopWorkDrawerEvent && <StopWorkDrawer e={stopWorkDrawerEvent} onClose={closeDrawer} onChanged={refresh} />}
+      {stopWorkDrawerEvent && (
+        <StopWorkDrawer
+          e={stopWorkDrawerEvent} onClose={closeDrawer} onChanged={refresh}
+          onOpenSource={(kind, id) => setNested({ kind, id })}
+        />
+      )}
 
-      {/* Nested one level deep, on top of whichever host drawer opened them — same stacking Investigations.tsx/Insights.tsx already do. */}
-      <Drawer open={!!nestedIncident} onClose={() => setNestedIncidentId(null)}>
-        {nestedIncident && <IncidentDetail i={nestedIncident} onClose={() => setNestedIncidentId(null)} onChanged={refresh} />}
+      <Drawer open={!!visitDrawer} onClose={closeDrawer}>
+        {visitDrawer && <VisitDrawerPanel v={visitDrawer} onClose={closeDrawer} />}
       </Drawer>
-      <Drawer open={!!nestedObs} onClose={() => setNestedObsId(null)}>
-        {nestedObs && <ObsDetail o={nestedObs} onClose={() => setNestedObsId(null)} />}
+
+      {/* Nested one level deep, on top of whichever host drawer opened them
+          — same stacking Investigations.tsx/Insights.tsx already do. Incident
+          and BarrierFailure are leaves here, no onOpenX at all — nesting
+          stops. Insight is the one hub that can land here (Investigation's
+          systemic-cause reference), and it still gets to reach its own leaf
+          (Observation) one level further, via nestedObsId below. See
+          [[project_linked_entity_pattern]]. */}
+      <Drawer open={!!nestedIncident} onClose={closeNested}>
+        {nestedIncident && <IncidentDetail i={nestedIncident} onClose={closeNested} onChanged={refresh} />}
+      </Drawer>
+      <Drawer open={!!nestedBarrierFailure} onClose={closeNested}>
+        {nestedBarrierFailure && (
+          <DrawerPanel title={nestedBarrierFailure.controlName} id={nestedBarrierFailure.id} fullRecordPath={`/risk/barrier-failures/${nestedBarrierFailure.id}`} onClose={closeNested}>
+            <BarrierFailureDetail b={nestedBarrierFailure} onChanged={refresh} />
+          </DrawerPanel>
+        )}
+      </Drawer>
+      <Drawer open={!!nestedInsight} onClose={closeNested}>
+        {nestedInsight && (
+          <DrawerPanel title={nestedInsight.title} id={nestedInsight.id} fullRecordPath={`/insights/${nestedInsight.id}`} onClose={closeNested}>
+            <InsightDetail i={nestedInsight} onStatusChange={refresh} onOpenObservation={setNestedObsId} />
+          </DrawerPanel>
+        )}
+      </Drawer>
+      <Drawer open={!!nestedObs} onClose={closeNested}>
+        {nestedObs && <ObsDetail o={nestedObs} onClose={closeNested} />}
+      </Drawer>
+
+      {/* One level deeper still, only ever reachable from nested Insight
+          above — always a leaf, so this is the end of the line. */}
+      <Drawer open={!!nestedLeafObs} onClose={() => setNestedObsId(null)}>
+        {nestedLeafObs && <ObsDetail o={nestedLeafObs} onClose={() => setNestedObsId(null)} />}
       </Drawer>
     </div>
   );

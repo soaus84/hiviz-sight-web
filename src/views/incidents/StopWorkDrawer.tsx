@@ -1,16 +1,33 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { Drawer, IconBtn, Badge, Btn, Card, Toggle } from '@/components';
+import { Drawer, IconBtn, Badge, Btn, Card } from '@/components';
+import { AttnRow } from '@/views/shared/AttnRow';
 import { useActiveUser } from '@/state/ActiveUser';
-import { confirmStopped, resume, setSiteWide, formatWhen } from '@/data/stopWork';
+import { confirmStopped, resume, formatWhen } from '@/data/stopWork';
+import { INCIDENTS_BY_ID } from '@/data/incidents';
+import { BARRIER_FAILURES_BY_ID } from '@/data/barrierFailures';
 import { STOP_WORK_STATUS_DISPLAY, SEVERITY_DISPLAY } from './incidentDisplay';
 import type { StopWorkEvent } from '@/types';
 
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13.5, outline: 'none', resize: 'vertical' as const };
+const sectionLabel = { fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' as const, color: colors.inkSoft, margin: '22px 0 10px' };
 
 interface TimelineEntry { label: string; by: string; at?: string; note?: string }
+
+/** A short, real summary of the source — not just its id — so the card
+ * reads like InvestigationDetail's "Source incidents" rows, not a bare
+ * badge. Falls back to the fields already copied onto the StopWorkEvent
+ * itself if the source record can't be found, so this never renders empty. */
+function describeSource(e: StopWorkEvent): { label: string; icon: string; title: string; meta: string } {
+  if (e.sourceKind === 'incident') {
+    const i = INCIDENTS_BY_ID[e.sourceId];
+    return i ? { label: 'Incident', icon: 'report', title: i.description, meta: `${i.siteName} · ${i.when}` } : { label: 'Incident', icon: 'report', title: e.workType, meta: e.siteName };
+  }
+  const b = BARRIER_FAILURES_BY_ID[e.sourceId];
+  return b ? { label: 'Barrier Failure', icon: 'gpp_bad', title: b.controlName, meta: `${b.siteName} · ${b.hazardName}` } : { label: 'Barrier Failure', icon: 'gpp_bad', title: e.workType, meta: e.siteName };
+}
 
 /** The cumulative story — every action recorded so far, who and when
  * (where is already carried by the site/incident badges above). Built
@@ -18,7 +35,7 @@ interface TimelineEntry { label: string; by: string; at?: string; note?: string 
  * really happened rather than every possible stage. */
 function buildTimeline(e: StopWorkEvent): TimelineEntry[] {
   const entries: TimelineEntry[] = [];
-  if (e.requestedBy) entries.push({ label: 'Stop requested', by: e.requestedBy, at: e.requestedAt });
+  if (e.requestedBy) entries.push({ label: 'Stop requested', by: e.requestedBy, at: e.requestedAt, note: e.requestNote });
   if (e.confirmedBy) entries.push({ label: e.requestedBy ? 'Confirmed stopped' : 'Stopped at the time', by: e.confirmedBy, at: e.confirmedAt });
   if (e.resumedBy) entries.push({ label: 'Resumed', by: e.resumedBy, at: e.resumedAt, note: e.resumeNote });
   return entries;
@@ -32,7 +49,13 @@ function buildTimeline(e: StopWorkEvent): TimelineEntry[] {
  * free-text name — same convention InsightDetail's addSupport already
  * uses — so "who" is never something someone has to type in about
  * themselves. */
-export function StopWorkDrawer({ e, onClose, onChanged }: { e: StopWorkEvent; onClose: () => void; onChanged?: () => void }) {
+/** `onOpenSource` opens the source Incident/BarrierFailure as a nested
+ * drawer over this one instead of navigating away — omitted (not just
+ * false) by whichever page renders this drawer already-nested inside
+ * someone else's, so nesting never goes past one level deep. See
+ * IncidentDetail.tsx's/SevereIncidentReview.tsx's/BarrierFailureDetail.tsx's
+ * own onOpenStopWork for the same rule in the other direction. */
+export function StopWorkDrawer({ e, onClose, onChanged, onOpenSource }: { e: StopWorkEvent; onClose: () => void; onChanged?: () => void; onOpenSource?: (sourceKind: 'incident' | 'barrierFailure', sourceId: string) => void }) {
   const navigate = useNavigate();
   const { user } = useActiveUser();
   const status = STOP_WORK_STATUS_DISPLAY[e.status];
@@ -41,6 +64,7 @@ export function StopWorkDrawer({ e, onClose, onChanged }: { e: StopWorkEvent; on
 
   const act = (fn: () => void) => { fn(); setNote(''); onChanged?.(); };
   const sourcePath = e.sourceKind === 'incident' ? `/incidents?id=${e.sourceId}` : `/risk/barrier-failures/${e.sourceId}`;
+  const source = describeSource(e);
 
   return (
     <Drawer open onClose={onClose}>
@@ -54,7 +78,6 @@ export function StopWorkDrawer({ e, onClose, onChanged }: { e: StopWorkEvent; on
           {e.siteWide && <Badge tone="error" outline>Site-wide</Badge>}
           <Badge tone={severity.tone} outline>{severity.label}</Badge>
           <Badge tone="primary" outline icon="place">{e.siteName}</Badge>
-          <Badge tone="primary" outline icon="report" onClick={() => navigate(sourcePath)}>{e.sourceId}</Badge>
         </div>
 
         {e.warrantedRationale && (
@@ -64,17 +87,12 @@ export function StopWorkDrawer({ e, onClose, onChanged }: { e: StopWorkEvent; on
           </Card>
         )}
 
-        {e.status !== 'resumed' && (
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16, padding: '10px 12px', background: colors.fill, borderRadius: 'var(--radius-md)' }}>
-            <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 600 }}>Site-wide stop</span>
-            <Toggle checked={!!e.siteWide} onChange={(checked) => { setSiteWide(e.id, checked); onChanged?.(); }} />
-          </div>
-        )}
-
         {e.status === 'pending_stop' && (
           <>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, lineHeight: 1.5, marginBottom: 14 }}>Awaiting confirmation from site that work has actually stopped.</div>
-            <Btn variant="danger" icon="check" onClick={() => act(() => confirmStopped(e.id, user.name))}>Confirm work has stopped</Btn>
+            <Btn variant="danger" icon="check" onClick={() => act(() => confirmStopped(e.id, user.name))}>
+              {e.siteWide ? 'Confirm work has stopped — site-wide' : 'Confirm work has stopped'}
+            </Btn>
           </>
         )}
 
@@ -105,6 +123,19 @@ export function StopWorkDrawer({ e, onClose, onChanged }: { e: StopWorkEvent; on
             </Card>
           </>
         )}
+
+        <div style={sectionLabel}>Source</div>
+        <Card pad={4} style={{ boxShadow: 'none' }}>
+          <AttnRow
+            label={source.label}
+            icon={source.icon}
+            tone={severity.tone}
+            title={source.title}
+            meta={source.meta}
+            last
+            onClick={() => (onOpenSource ? onOpenSource(e.sourceKind, e.sourceId) : navigate(sourcePath))}
+          />
+        </Card>
       </div>
     </Drawer>
   );

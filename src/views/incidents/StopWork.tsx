@@ -3,12 +3,17 @@ import { useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
 import { useListKeyNav } from '@/hooks/useListKeyNav';
-import { PageHead, Card, Tabs, Badge, Icon } from '@/components';
+import { PageHead, Card, Tabs, Badge, Icon, Drawer } from '@/components';
 import { STOP_WORK_EVENTS, stopWorkEventInRegion, formatWhen } from '@/data/stopWork';
+import { INCIDENTS_BY_ID } from '@/data/incidents';
+import { BARRIER_FAILURES_BY_ID } from '@/data/barrierFailures';
 import { purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
 import { StopWorkCard } from './StopWorkCard';
 import { StopWorkDrawer } from './StopWorkDrawer';
+import { IncidentDetail } from './IncidentDetail';
+import { DrawerPanel } from '@/views/shared/DrawerPanel';
+import { BarrierFailureDetail } from '@/views/risk/BarrierFailureDetail';
 import { STOP_WORK_STATUS_DISPLAY } from './incidentDisplay';
 import type { StopWorkEvent, StopWorkStatus } from '@/types';
 
@@ -59,6 +64,10 @@ export function StopWork({ title, sub }: StopWorkProps = {}) {
   // STOP_WORK_EVENTS mutates in place — nothing else here re-renders when a
   // drawer action changes an event's status, so force it explicitly.
   const [, forceRender] = useState(0);
+  // The source's own drawer, nested one level over the primary StopWorkDrawer
+  // — never given its own onOpenX props (IncidentDetail/BarrierFailureDetail
+  // here don't get onOpenStopWork/onOpenInvestigation), so nesting stops here.
+  const [nestedSource, setNestedSource] = useState<{ kind: 'incident' | 'barrierFailure'; id: string } | null>(null);
 
   // Not memoized — STOP_WORK_EVENTS mutates in place.
   const inRegion = STOP_WORK_EVENTS.filter((e) => stopWorkEventInRegion(e, purview));
@@ -133,7 +142,33 @@ export function StopWork({ title, sub }: StopWorkProps = {}) {
         </div>
       )}
 
-      {sel && <StopWorkDrawer key={sel.id} e={sel} onClose={() => setSelId(null)} onChanged={() => forceRender((v) => v + 1)} />}
+      {sel && (
+        <StopWorkDrawer
+          key={sel.id} e={sel} onClose={() => setSelId(null)} onChanged={() => forceRender((v) => v + 1)}
+          onOpenSource={(kind, id) => setNestedSource({ kind, id })}
+        />
+      )}
+
+      {nestedSource?.kind === 'incident' && (() => {
+        const incident = INCIDENTS_BY_ID[nestedSource.id];
+        return (
+          <Drawer open={!!incident} onClose={() => setNestedSource(null)}>
+            {incident && <IncidentDetail i={incident} onClose={() => setNestedSource(null)} onChanged={() => forceRender((v) => v + 1)} />}
+          </Drawer>
+        );
+      })()}
+      {nestedSource?.kind === 'barrierFailure' && (() => {
+        const barrierFailure = BARRIER_FAILURES_BY_ID[nestedSource.id];
+        return (
+          <Drawer open={!!barrierFailure} onClose={() => setNestedSource(null)}>
+            {barrierFailure && (
+              <DrawerPanel title={barrierFailure.controlName} id={barrierFailure.id} fullRecordPath={`/risk/barrier-failures/${barrierFailure.id}`} onClose={() => setNestedSource(null)}>
+                <BarrierFailureDetail b={barrierFailure} onChanged={() => forceRender((v) => v + 1)} />
+              </DrawerPanel>
+            )}
+          </Drawer>
+        );
+      })()}
     </div>
   );
 }

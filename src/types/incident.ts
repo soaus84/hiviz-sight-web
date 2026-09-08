@@ -121,15 +121,20 @@ export interface StopWorkEvent {
    * "why" for this specific stop, not re-derived from the source each render. */
   warrantedRationale?: string;
   /** Whether this stop covers the whole site or just workType — a
-   * manager's call, never settable from a site-side capture. Editable for
-   * the life of the stop (not fixed at creation) via data/stopWork.ts's
-   * setSiteWide — a situation can turn out broader than first assessed. */
+   * manager's call, never settable from a site-side capture. Fixed at the
+   * moment the stop is requested/called (see callStopWork), not editable
+   * afterward — the confirm/resolve steps only ever display it (badge,
+   * and folded into the confirm button's own label), never let it change. */
   siteWide?: boolean;
   /** Set at creation via a manager's Request stop work action — who
    * requested it, not who executed it. Unset when the site already called
    * it at capture (nothing to request, it already happened). */
   requestedBy?: string;
   requestedAt?: string;
+  /** Optional instruction a manager adds when requesting the stop — shown
+   * alongside "Stop requested" in the drawer's Story timeline, the same
+   * treatment resumeNote already gets for the resume step. */
+  requestNote?: string;
   /** Set once the site confirms it's actually stopped — pending_stop ->
    * stopped — or immediately at creation, when it was already
    * stopWorkCalled = true at capture (no request/confirm gap to speak of). */

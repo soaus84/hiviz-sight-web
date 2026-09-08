@@ -119,13 +119,13 @@ function replaceStopWorkEvent(id: string, patch: Partial<StopWorkEvent>): StopWo
  * source with stopWorkCalled/stopWorkEventId so its own screen collapses
  * from the decision fork to a status link-through. siteWide is always the
  * manager's own explicit call here, never inferred. */
-export function callStopWork(sourceKind: SourceKind, sourceId: string, requestedBy: string, siteWide: boolean): StopWorkEvent {
+export function callStopWork(sourceKind: SourceKind, sourceId: string, requestedBy: string, siteWide: boolean, requestNote?: string): StopWorkEvent {
   const src = sourceFieldsFor(sourceKind, sourceId);
   const id = nextStopWorkId();
   const event: StopWorkEvent = {
     id, status: 'pending_stop', sourceKind, sourceId, siteWide,
     ...src, warrantedRationale: warrantedRationaleFor(sourceKind, sourceId),
-    requestedBy, requestedAt: new Date().toISOString(),
+    requestedBy, requestedAt: new Date().toISOString(), requestNote,
     requiresApproval: requiresApproval(src.severityClass),
   };
   STOP_WORK_EVENTS.push(event);
@@ -153,13 +153,6 @@ export function confirmStopped(id: string, confirmedBy: string): StopWorkEvent |
  * enabling this, not a separate pipeline stage to pass through. */
 export function resume(id: string, resumedBy: string, note: string): StopWorkEvent | null {
   return replaceStopWorkEvent(id, { status: 'resumed', resumedBy, resumedAt: new Date().toISOString(), resumeNote: note });
-}
-
-/** A manager's scope call, editable for the life of the stop (any time
- * before resumed) — see StopWorkEvent.siteWide's own note. Never settable
- * except through this, and never from a site-side capture. */
-export function setSiteWide(id: string, siteWide: boolean): StopWorkEvent | null {
-  return replaceStopWorkEvent(id, { siteWide });
 }
 
 export function stopWorkEventInRegion(e: StopWorkEvent, purview: PurviewFilter): boolean {
