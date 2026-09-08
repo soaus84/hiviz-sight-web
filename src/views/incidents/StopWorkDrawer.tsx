@@ -6,7 +6,7 @@ import { AttnRow } from '@/views/shared/AttnRow';
 import { useActiveUser } from '@/state/ActiveUser';
 import { confirmStopped, resume, formatWhen } from '@/data/stopWork';
 import { INCIDENTS_BY_ID } from '@/data/incidents';
-import { BARRIER_FAILURES_BY_ID } from '@/data/barrierFailures';
+import { BARRIER_FAILURES_BY_ID, barrierFailurePath } from '@/data/barrierFailures';
 import { STOP_WORK_STATUS_DISPLAY, SEVERITY_DISPLAY } from './incidentDisplay';
 import type { StopWorkEvent } from '@/types';
 
@@ -63,7 +63,8 @@ export function StopWorkDrawer({ e, onClose, onChanged, onOpenSource }: { e: Sto
   const [note, setNote] = useState('');
 
   const act = (fn: () => void) => { fn(); setNote(''); onChanged?.(); };
-  const sourcePath = e.sourceKind === 'incident' ? `/incidents?id=${e.sourceId}` : `/risk/barrier-failures/${e.sourceId}`;
+  const sourceBarrierFailure = e.sourceKind === 'barrierFailure' ? BARRIER_FAILURES_BY_ID[e.sourceId] : undefined;
+  const sourcePath = e.sourceKind === 'incident' ? `/incidents?id=${e.sourceId}` : sourceBarrierFailure ? barrierFailurePath(sourceBarrierFailure) : `/risk/barrier-failures/${e.sourceId}`;
   const source = describeSource(e);
 
   return (

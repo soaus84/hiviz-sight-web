@@ -6,7 +6,7 @@ import { useListKeyNav } from '@/hooks/useListKeyNav';
 import { PageHead, Card, Tabs, Badge, Icon, Drawer } from '@/components';
 import { STOP_WORK_EVENTS, stopWorkEventInRegion, formatWhen } from '@/data/stopWork';
 import { INCIDENTS_BY_ID } from '@/data/incidents';
-import { BARRIER_FAILURES_BY_ID } from '@/data/barrierFailures';
+import { BARRIER_FAILURES_BY_ID, barrierFailurePath } from '@/data/barrierFailures';
 import { purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
 import { StopWorkCard } from './StopWorkCard';
@@ -162,7 +162,7 @@ export function StopWork({ title, sub }: StopWorkProps = {}) {
         return (
           <Drawer open={!!barrierFailure} onClose={() => setNestedSource(null)}>
             {barrierFailure && (
-              <DrawerPanel title={barrierFailure.controlName} id={barrierFailure.id} fullRecordPath={`/risk/barrier-failures/${barrierFailure.id}`} onClose={() => setNestedSource(null)}>
+              <DrawerPanel title={barrierFailure.controlName} id={barrierFailure.id} fullRecordPath={barrierFailurePath(barrierFailure)} onClose={() => setNestedSource(null)}>
                 <BarrierFailureDetail b={barrierFailure} onChanged={() => forceRender((v) => v + 1)} />
               </DrawerPanel>
             )}

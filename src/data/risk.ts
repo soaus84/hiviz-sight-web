@@ -167,6 +167,8 @@ export const WORKSITE_CONTROLS: WorksiteControl[] = [
 
   // Equipment storage — pushed wherever mobile plant runs
   { id: 'wc16', criticalControlId: 'cc16', siteId: site('Northgate Open Cut').id, status: 'active', assignedVerifierName: 'James Morrow', lastVerifiedAt: '2025-05-07T06:00:00', lastVerified: 'Today' },
+  { id: 'wc17', criticalControlId: 'cc16', siteId: site('Marlow Stockyard').id, status: 'active', assignedVerifierName: 'D. Cole', lastVerifiedAt: '2025-05-02T08:00:00', lastVerified: '5d ago' },
+  { id: 'wc18', criticalControlId: 'cc16', siteId: site('Brookman Pit 2').id, status: 'active', assignedVerifierName: 'R. Bridges', lastVerifiedAt: '2025-05-07T07:30:00', lastVerified: 'Today' },
 ];
 
 export const WORKSITE_CONTROLS_BY_ID: Record<string, WorksiteControl> = Object.fromEntries(WORKSITE_CONTROLS.map((c) => [c.id, c]));

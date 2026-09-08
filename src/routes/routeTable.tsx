@@ -76,6 +76,8 @@ export const routes = [
       { path: 'incidents/dashboard', element: <IncidentDashboard /> },
       { path: 'incidents/stop-work', element: <StopWork /> },
       { path: 'risk/dashboard', element: <RiskDashboard /> },
+      { path: 'risk/critical-barrier-failures', element: <BarrierFailures critical /> },
+      { path: 'risk/critical-barrier-failures/:id', element: <BarrierFailures critical /> },
       { path: 'risk/barrier-failures', element: <BarrierFailures /> },
       { path: 'risk/barrier-failures/:id', element: <BarrierFailures /> },
       { path: 'risk/work-types', element: <WorkTypes /> },

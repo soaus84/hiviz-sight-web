@@ -2,6 +2,7 @@ import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
 import { Card, Eyebrow, Badge, InfoTip } from '@/components';
 import { computeControlEffectiveness, recentControlFailures } from '@/data/risk';
+import { barrierFailurePath } from '@/data/barrierFailures';
 import { CONTROL_EFFECTIVENESS_DISPLAY, BARRIER_FAILURE_STATUS_DISPLAY } from './riskDisplay';
 
 function ControlEffectivenessInfo() {
@@ -46,7 +47,7 @@ export function ControlEffectivenessCard({ criticalControlId, siteId }: { critic
           <div
             key={f.id}
             className="a-card-int"
-            onClick={() => navigate(`/risk/barrier-failures/${f.id}`)}
+            onClick={() => navigate(barrierFailurePath(f))}
             style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, padding: '10px 0', marginTop: 4, borderTop: `1px solid ${colors.ruleSoft}`, cursor: 'pointer' }}
           >
             <div style={{ minWidth: 0 }}>

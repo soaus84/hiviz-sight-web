@@ -10,7 +10,7 @@ import { computeFocusItems } from '@/data/myWorkspace';
 import { INSIGHT_KIND_LABEL, INSIGHTS_BY_ID } from '@/data/insights';
 import { INVESTIGATIONS_BY_ID } from '@/data/investigations';
 import { INCIDENTS_BY_ID } from '@/data/incidents';
-import { BARRIER_FAILURES_BY_ID } from '@/data/barrierFailures';
+import { BARRIER_FAILURES_BY_ID, barrierFailurePath } from '@/data/barrierFailures';
 import { STOP_WORK_EVENTS_BY_ID } from '@/data/stopWork';
 import { VISITS } from '@/data/visits';
 import { OBSERVATIONS } from '@/data/observations';
@@ -256,7 +256,7 @@ export function MyWorkspace() {
 
       <Drawer open={!!barrierFailureDrawer} onClose={closeDrawer}>
         {barrierFailureDrawer && (
-          <DrawerPanel title={barrierFailureDrawer.controlName} id={barrierFailureDrawer.id} fullRecordPath={`/risk/barrier-failures/${barrierFailureDrawer.id}`} onClose={closeDrawer}>
+          <DrawerPanel title={barrierFailureDrawer.controlName} id={barrierFailureDrawer.id} fullRecordPath={barrierFailurePath(barrierFailureDrawer)} onClose={closeDrawer}>
             <BarrierFailureDetail b={barrierFailureDrawer} onChanged={refresh} />
           </DrawerPanel>
         )}
@@ -285,7 +285,7 @@ export function MyWorkspace() {
       </Drawer>
       <Drawer open={!!nestedBarrierFailure} onClose={closeNested}>
         {nestedBarrierFailure && (
-          <DrawerPanel title={nestedBarrierFailure.controlName} id={nestedBarrierFailure.id} fullRecordPath={`/risk/barrier-failures/${nestedBarrierFailure.id}`} onClose={closeNested}>
+          <DrawerPanel title={nestedBarrierFailure.controlName} id={nestedBarrierFailure.id} fullRecordPath={barrierFailurePath(nestedBarrierFailure)} onClose={closeNested}>
             <BarrierFailureDetail b={nestedBarrierFailure} onChanged={refresh} />
           </DrawerPanel>
         )}

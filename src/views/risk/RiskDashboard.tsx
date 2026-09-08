@@ -3,7 +3,7 @@ import { colors } from '@/tokens';
 import { PageHead, Stat, Card, Eyebrow, Meter, Icon, InfoTip } from '@/components';
 import { SITES } from '@/data/sites';
 import { HAZARDS, CRITICAL_CONTROLS, WORKSITE_CONTROLS, computeWorkTypeRisk, RATING_RANK } from '@/data/risk';
-import { BARRIER_FAILURES, barrierFailureInRegion } from '@/data/barrierFailures';
+import { BARRIER_FAILURES, barrierFailureInRegion, barrierFailurePath } from '@/data/barrierFailures';
 import { HIGH_RISK_WORK } from '@/data/admin/taxonomies';
 import { inPurview, purviewLabel, purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
@@ -46,13 +46,13 @@ export function RiskDashboard() {
       </div>
 
       <Card pad={20} style={{ marginBottom: 16 }}>
-        <Eyebrow right={<span onClick={() => navigate('/risk/barrier-failures')} style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: colors.ink, textDecoration: 'underline' }}>View all</span>}>
+        <Eyebrow right={<span onClick={() => navigate('/risk/critical-barrier-failures')} style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: colors.ink, textDecoration: 'underline' }}>View all</span>}>
           Needs your attention
         </Eyebrow>
         {[...open, ...inReview].map((b, i, arr) => {
           const severity = SEVERITY_DISPLAY[b.severityClass];
           return (
-            <AttnRow key={b.id} label={severity.label} tone={severity.tone} title={b.controlName} meta={`${b.siteName} · ${b.hazardName}`} onClick={() => navigate(`/risk/barrier-failures/${b.id}`)} last={i === arr.length - 1} />
+            <AttnRow key={b.id} label={severity.label} tone={severity.tone} title={b.controlName} meta={`${b.siteName} · ${b.hazardName}`} onClick={() => navigate(barrierFailurePath(b))} last={i === arr.length - 1} />
           );
         })}
         {open.length === 0 && inReview.length === 0 && (

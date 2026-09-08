@@ -105,6 +105,7 @@ export const WORKSPACES: Workspace[] = [
     home: '/risk/dashboard',
     nav: [
       { path: '/risk/dashboard', label: 'Dashboard', icon: 'grid_view' },
+      { path: '/risk/critical-barrier-failures', label: 'Critical Barrier Failures', icon: 'fact_check' },
       { path: '/risk/barrier-failures', label: 'Barrier Failures', icon: 'gpp_bad' },
       { path: '/risk/work-types', label: 'Work Types', icon: 'engineering' },
       { path: '/risk/register', label: 'Register', icon: 'list_alt' },

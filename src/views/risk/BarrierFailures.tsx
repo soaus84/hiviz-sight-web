@@ -13,12 +13,19 @@ import { BarrierFailuresBoard } from './BarrierFailuresBoard';
 import { insightsFitToHeight, type InsightsView } from '@/views/insights/insightsLayout';
 import type { BarrierFailureStatus } from '@/types';
 
-const VALID_TABS: BarrierFailureStatus[] = ['open', 'review', 'returned', 'resolved'];
-function isBarrierFailureStatus(v: string | null): v is BarrierFailureStatus {
-  return !!v && (VALID_TABS as string[]).includes(v);
-}
-
 export interface BarrierFailuresProps {
+  /** Restricts this page to failures whose hazard severity requires manager
+   * approval (serious/critical) — 'review'/'returned' only exist for these;
+   * minor/moderate resolve directly (see resolveDirectly's own guard) and
+   * can never reach them, so the routine page (this prop omitted) only ever
+   * needs an Open/Resolved pair of tabs. Same severity-based split
+   * Incidents/Investigations already use (a routine list vs a decision
+   * queue) — one shared page component here rather than two, since
+   * BarrierFailure, unlike Incident/Investigation, is a single entity type
+   * with one status enum throughout, not two entity types being merged.
+   * Severity is fixed for a record's whole lifetime (no mutator reassigns
+   * it), so a record never needs to move from one page to the other. */
+  critical?: boolean;
   title?: string;
   sub?: string;
 }
@@ -28,12 +35,19 @@ export interface BarrierFailuresProps {
 // structural duty, see data/myWorkspace.ts's top-of-file note), so
 // purview-scoped IS the personal view already; MyBarrierFailures.tsx
 // renders this component unchanged bar a friendlier title.
-export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
+export function BarrierFailures({ critical = false, title, sub }: BarrierFailuresProps = {}) {
   const { id } = useParams();
   const navigate = useNavigate();
   const [params, setParams] = useSearchParams();
   const breakpoint = useBreakpoint();
   const { region, division } = usePurviewScope();
+
+  const basePath = critical ? '/risk/critical-barrier-failures' : '/risk/barrier-failures';
+  const visibleTabs: BarrierFailureStatus[] = critical ? ['open', 'review', 'returned', 'resolved'] : ['open', 'resolved'];
+  function isVisibleTab(v: string | null): v is BarrierFailureStatus {
+    return !!v && (visibleTabs as string[]).includes(v);
+  }
+  const defaultTab: BarrierFailureStatus = critical ? 'review' : 'open';
 
   const view: InsightsView = params.get('view') === 'board' ? 'board' : 'list';
   const setView = (v: InsightsView) => {
@@ -44,7 +58,7 @@ export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
 
   const deepLinked = id ? BARRIER_FAILURES_BY_ID[id] : undefined;
   const tabParam = params.get('tab');
-  const [tab, setTabState] = useState<BarrierFailureStatus>(deepLinked?.status || (isBarrierFailureStatus(tabParam) ? tabParam : 'open'));
+  const [tab, setTabState] = useState<BarrierFailureStatus>(deepLinked?.status || (isVisibleTab(tabParam) ? tabParam : defaultTab));
   const [selId, setSelId] = useState<string | null>(deepLinked?.id || null);
 
   useEffect(() => {
@@ -52,7 +66,7 @@ export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
   }, [id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Not memoized — BARRIER_FAILURES mutates in place, same reasoning as Insights.tsx.
-  const inRegion = BARRIER_FAILURES.filter((b) => barrierFailureInRegion(b, { region, division }));
+  const inRegion = BARRIER_FAILURES.filter((b) => barrierFailureInRegion(b, { region, division }) && b.requiresApproval === critical);
 
   const counts = {
     open: inRegion.filter((b) => b.status === 'open').length,
@@ -71,8 +85,8 @@ export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
 
   const setTab = (k: string) => {
     setTabState(k as BarrierFailureStatus);
-    setParams(k === 'open' ? {} : { tab: k }, { replace: true });
-    if (id) navigate('/risk/barrier-failures', { replace: true });
+    setParams(k === defaultTab ? {} : { tab: k }, { replace: true });
+    if (id) navigate(basePath, { replace: true });
   };
 
   const handleChanged = () => {
@@ -80,12 +94,12 @@ export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
     const updated = BARRIER_FAILURES_BY_ID[selId];
     if (!updated) return;
     setTabState(updated.status);
-    setParams(updated.status === 'open' ? {} : { tab: updated.status }, { replace: true });
+    setParams(updated.status === defaultTab ? {} : { tab: updated.status }, { replace: true });
   };
 
   const selectCard = (cardId: string) => {
     setSelId(cardId);
-    navigate(`/risk/barrier-failures/${cardId}`, { replace: true });
+    navigate(`${basePath}/${cardId}`, { replace: true });
   };
   useListKeyNav(list, selId, selectCard, view === 'list');
 
@@ -98,12 +112,14 @@ export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
   return (
     <div style={{ height: fitToHeight ? '100%' : undefined, display: fitToHeight ? 'flex' : undefined, flexDirection: fitToHeight ? 'column' : undefined }}>
       {singleColumn && sel && view === 'list' ? (
-        <LinkBtn icon="arrow_back" size="md" onClick={() => { setSelId(null); navigate('/risk/barrier-failures'); }} style={{ marginBottom: 16 }}>All barrier failures</LinkBtn>
+        <LinkBtn icon="arrow_back" size="md" onClick={() => { setSelId(null); navigate(basePath); }} style={{ marginBottom: 16 }}>All {critical ? 'critical ' : ''}barrier failures</LinkBtn>
       ) : (
         <>
           <PageHead
-            title={title ?? 'Barrier Failures'}
-            sub={sub ?? `Control verifications that came back not-in-place across ${purviewPhrase(region, division)}.`}
+            title={title ?? (critical ? 'Critical Barrier Failures' : 'Barrier Failures')}
+            sub={sub ?? (critical
+              ? `Serious and critical control failures awaiting review, across ${purviewPhrase(region, division)}.`
+              : `Minor and moderate control verifications, resolved directly by site, across ${purviewPhrase(region, division)}.`)}
             actions={
               <>
                 <IconBtn name="view_list" active={view === 'list'} onClick={() => setView('list')} />
@@ -114,14 +130,20 @@ export function BarrierFailures({ title, sub }: BarrierFailuresProps = {}) {
           />
           {view === 'list' && (
             <div style={{ marginBottom: 20 }}>
-              <Tabs value={tab} onChange={setTab} items={[{ k: 'open', label: 'Open', n: counts.open }, { k: 'review', label: 'In review', n: counts.review }, { k: 'returned', label: 'Returned', n: counts.returned }, { k: 'resolved', label: 'Resolved', n: counts.resolved }]} />
+              <Tabs
+                value={tab}
+                onChange={setTab}
+                items={critical
+                  ? [{ k: 'open', label: 'Open', n: counts.open }, { k: 'review', label: 'In review', n: counts.review }, { k: 'returned', label: 'Returned', n: counts.returned }, { k: 'resolved', label: 'Resolved', n: counts.resolved }]
+                  : [{ k: 'open', label: 'Open', n: counts.open }, { k: 'resolved', label: 'Resolved', n: counts.resolved }]}
+              />
             </div>
           )}
         </>
       )}
 
       {view === 'board' ? (
-        <BarrierFailuresBoard failures={inRegion} onOpen={selectCard} />
+        <BarrierFailuresBoard failures={inRegion} onOpen={selectCard} critical={critical} />
       ) : (
         <div
           style={{

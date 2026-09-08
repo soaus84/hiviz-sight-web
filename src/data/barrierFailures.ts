@@ -84,6 +84,30 @@ export const BARRIER_FAILURES: BarrierFailure[] = [
       { kind: 'returned', by: 'Priya Singh', at: '2025-04-16T15:00:00', note: 'Good — but confirm the same inspection gap doesn’t exist on the other anchor points on this gantry before I sign off.' },
     ],
   },
+  // BF-105/106 round out the minor/moderate, resolves-directly end of the
+  // pool — every other seed record here is serious/critical, which reads
+  // honestly for a critical-control-verification program (most controls in
+  // this register guard serious/critical hazards by design) but left the
+  // routine "Barrier Failures" list with a single record. These are the same
+  // housekeeping-type control as BF-101 (cc16 — see risk.ts's wc17/wc18),
+  // just at the two sites that otherwise had zero Risk-workspace presence.
+  {
+    id: 'BF-105', worksiteControlId: 'wc17', siteId: site('Marlow Stockyard').id, siteName: 'Marlow Stockyard',
+    controlName: 'Equipment returned to designated storage after use', controlType: 'prevention', hazardName: 'Equipment left out of storage — damage or trip hazard',
+    severityClass: 'minor', energyType: 'none', requiresApproval: requiresApproval('minor'),
+    flaggedBy: 'D. Cole', when: '5d ago', flaggedAt: '2025-05-02T08:00:00',
+    notes: 'Loading chute maintenance kit left at the base of the stacker instead of the site lockup overnight.',
+    status: 'resolved', resolutionNote: 'Kit returned to the lockup; shift handover checklist updated to include a lockup check.', resolvedBy: 'D. Cole',
+    rounds: [{ kind: 'submitted', by: 'D. Cole', at: '2025-05-02T09:00:00', note: 'Kit returned to the lockup; shift handover checklist updated to include a lockup check.' }],
+  },
+  {
+    id: 'BF-106', worksiteControlId: 'wc18', siteId: site('Brookman Pit 2').id, siteName: 'Brookman Pit 2',
+    controlName: 'Equipment returned to designated storage after use', controlType: 'prevention', hazardName: 'Equipment left out of storage — damage or trip hazard',
+    severityClass: 'minor', energyType: 'none', requiresApproval: requiresApproval('minor'),
+    flaggedBy: 'R. Bridges', when: 'Today', flaggedAt: '2025-05-07T07:30:00',
+    notes: 'Grade control drill rods left stacked beside the haul road instead of the designated rod rack.',
+    status: 'open', rounds: [],
+  },
 ];
 
 export const BARRIER_FAILURES_BY_ID: Record<string, BarrierFailure> = Object.fromEntries(BARRIER_FAILURES.map((b) => [b.id, b]));
@@ -169,4 +193,16 @@ export function dismissBarrierFailureStopWork(id: string, dismissedBy: string, n
 export function barrierFailureInRegion(failure: BarrierFailure, purview: PurviewFilter): boolean {
   const s = SITES_BY_ID[failure.siteId];
   return !!s && inPurview(s, purview);
+}
+
+/** Which of the two Barrier Failures pages (routine vs Critical) a given
+ * record lives on — severity is fixed for the life of a record (never
+ * reassigned by any mutator above), so this never has to react to a status
+ * change, only ever be computed from `requiresApproval`. Every call site
+ * that links to a barrier failure by id should go through this rather than
+ * hardcoding `/risk/barrier-failures/${id}`, since a link built for the
+ * wrong page would resolve the record (BARRIER_FAILURES_BY_ID doesn't care)
+ * but drop it from that page's severity-filtered list. */
+export function barrierFailurePath(b: Pick<BarrierFailure, 'id' | 'requiresApproval'>): string {
+  return b.requiresApproval ? `/risk/critical-barrier-failures/${b.id}` : `/risk/barrier-failures/${b.id}`;
 }
