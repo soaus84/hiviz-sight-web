@@ -1,12 +1,7 @@
-import { colors, type Tone } from '@/tokens';
+import { colors } from '@/tokens';
 import { Avatar, Badge, Icon } from '@/components';
-import { SEVERITY_DISPLAY } from './incidentDisplay';
-import type { Investigation, InvestigationStatus } from '@/types';
-
-const STATUS: Record<InvestigationStatus, [string, Tone]> = {
-  open: ['Investigating', 'info'],
-  closed: ['Closed', 'success'],
-};
+import { SEVERITY_DISPLAY, INVESTIGATION_STATUS_DISPLAY } from './incidentDisplay';
+import type { Investigation } from '@/types';
 
 export interface InvestigationCardProps {
   v: Investigation;
@@ -15,7 +10,7 @@ export interface InvestigationCardProps {
 }
 
 export function InvestigationCard({ v, onClick, selected }: InvestigationCardProps) {
-  const [sl, sh] = STATUS[v.status];
+  const status = INVESTIGATION_STATUS_DISPLAY[v.status];
   const severity = SEVERITY_DISPLAY[v.severityClass];
   return (
     <div
@@ -24,7 +19,7 @@ export function InvestigationCard({ v, onClick, selected }: InvestigationCardPro
       style={{ background: colors.panel, border: `1px solid ${selected ? colors.ink : colors.rule}`, borderRadius: 'var(--radius-lg)', padding: 15, cursor: 'pointer', boxShadow: selected ? 'var(--shadow-rail)' : 'none' }}
     >
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 9 }}>
-        <Badge tone={sh}>{sl}</Badge>
+        <Badge tone={status.tone}>{status.label}</Badge>
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10, fontWeight: 700, color: colors.inkMuted, marginLeft: 'auto', textTransform: 'uppercase', letterSpacing: 0.5 }}>{severity.label}</span>
         {v.legalHold && <Icon name="lock" size={14} color={colors.red} />}
       </div>

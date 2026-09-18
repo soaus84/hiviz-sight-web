@@ -1,6 +1,6 @@
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Stat, Card, Eyebrow, Meter, Icon, InfoTip } from '@/components';
+import { PageHead, Stat, Meter, Icon, InfoTip, LinkBtn } from '@/components';
 import { SITES } from '@/data/sites';
 import { HAZARDS, CRITICAL_CONTROLS, WORKSITE_CONTROLS, computeWorkTypeRisk, RATING_RANK } from '@/data/risk';
 import { BARRIER_FAILURES, barrierFailureInRegion, barrierFailurePath } from '@/data/barrierFailures';
@@ -8,6 +8,7 @@ import { HIGH_RISK_WORK } from '@/data/admin/taxonomies';
 import { inPurview, purviewLabel, purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
 import { AttnRow } from '@/views/shared/AttnRow';
+import { Section } from '@/views/shared/SectionHeading';
 import { SEVERITY_DISPLAY, LIKELIHOOD_DISPLAY } from './riskDisplay';
 import { RiskRatingInfo } from './RiskRatingInfo';
 
@@ -45,10 +46,11 @@ export function RiskDashboard() {
         <Stat label="Active controls" value={activeControls.length} icon="verified" />
       </div>
 
-      <Card pad={20} style={{ marginBottom: 16 }}>
-        <Eyebrow right={<span onClick={() => navigate('/risk/critical-barrier-failures')} style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: colors.ink, textDecoration: 'underline' }}>View all</span>}>
-          Needs your attention
-        </Eyebrow>
+      <Section
+        title="Needs your attention"
+        subtitle="Barrier failures open or awaiting your review."
+        action={<LinkBtn onClick={() => navigate('/risk/critical-barrier-failures')}>View all</LinkBtn>}
+      >
         {[...open, ...inReview].map((b, i, arr) => {
           const severity = SEVERITY_DISPLAY[b.severityClass];
           return (
@@ -58,15 +60,13 @@ export function RiskDashboard() {
         {open.length === 0 && inReview.length === 0 && (
           <div style={{ padding: '20px 4px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>Nothing needs attention in {purviewPhrase(region, division)} right now.</div>
         )}
-      </Card>
+      </Section>
 
-      <Card pad={20} style={{ marginBottom: 16 }}>
-        <Eyebrow right={<span onClick={() => navigate('/risk/work-types')} style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: colors.ink, textDecoration: 'underline' }}>All work types</span>}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-            Highest risk work types
-            <InfoTip><RiskRatingInfo /></InfoTip>
-          </span>
-        </Eyebrow>
+      <Section
+        title={<span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>Highest risk work types<InfoTip><RiskRatingInfo /></InfoTip></span>}
+        subtitle="Work types ranked by combined severity and recent event likelihood."
+        action={<LinkBtn onClick={() => navigate('/risk/work-types')}>All work types</LinkBtn>}
+      >
         {highestRisk.map(({ t, risk }, i) => (
           <AttnRow
             key={t.id}
@@ -81,12 +81,13 @@ export function RiskDashboard() {
         {highestRisk.length === 0 && (
           <div style={{ padding: '20px 4px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>No hazards defined yet — start from Work Types.</div>
         )}
-      </Card>
+      </Section>
 
-      <Eyebrow right={<span onClick={() => navigate('/risk/work-types')} style={{ cursor: 'pointer', fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, color: colors.ink, textDecoration: 'underline' }}>All work types</span>}>
-        Control health by work type
-      </Eyebrow>
-      <Card pad={20}>
+      <Section
+        title="Control health by work type"
+        subtitle="Share of controls currently active, per work type with hazards defined."
+        action={<LinkBtn onClick={() => navigate('/risk/work-types')}>All work types</LinkBtn>}
+      >
         {workTypesWithHazards.map((t, i) => {
           const hazardIds = new Set(HAZARDS.filter((h) => h.workTypeId === t.id).map((h) => h.id));
           const controlIds = new Set(CRITICAL_CONTROLS.filter((c) => hazardIds.has(c.hazardId)).map((c) => c.id));
@@ -117,7 +118,7 @@ export function RiskDashboard() {
         {workTypesWithHazards.length === 0 && (
           <div style={{ padding: '20px 4px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>No hazards defined yet — start from Work Types.</div>
         )}
-      </Card>
+      </Section>
     </div>
   );
 }

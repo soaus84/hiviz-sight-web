@@ -1,5 +1,6 @@
 import { colors } from '@/tokens';
-import { Avatar, Badge, Card, Fact, Btn, IconBtn } from '@/components';
+import { Avatar, Badge, Fact, Btn, IconBtn } from '@/components';
+import { Section } from '@/views/shared/SectionHeading';
 import type { Contact } from '@/types';
 
 export function ContactDetail({ c, onClose }: { c: Contact; onClose: () => void }) {
@@ -29,14 +30,13 @@ export function ContactDetail({ c, onClose }: { c: Contact; onClose: () => void 
           )}
         </div>
 
-        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '0 0 8px' }}>Contact details</div>
-        <Card pad={16}>
+        <Section title="Contact details" subtitle="Status, shift, and how to reach this contact." style={{ marginTop: 0 }}>
           <Fact k="Status" v={c.status} />
           {c.shift && <Fact k="Shift" v={c.shift} />}
           <Fact k="Phone" v={c.phone} />
           {c.radioChannel && <Fact k="Radio" v={c.radioChannel} />}
           <Fact k="Email" v={c.email} last />
-        </Card>
+        </Section>
       </div>
     </>
   );

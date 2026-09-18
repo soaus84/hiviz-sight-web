@@ -1,8 +1,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import { useBreakpoint } from '@/hooks/useBreakpoint';
-import { Stat, Card, Eyebrow, AINote, Avatar, Badge, ListRow, LinkBtn } from '@/components';
+import { Stat, AINote, Avatar, Badge, ListRow, LinkBtn } from '@/components';
 import { colors } from '@/tokens';
 import { AttnRow } from '@/views/shared/AttnRow';
+import { Section } from '@/views/shared/SectionHeading';
 import { SiteHeader } from './SiteHeader';
 import { SITES } from '@/data/sites';
 import { INSIGHTS, INSIGHT_KIND_LABEL } from '@/data/insights';
@@ -34,10 +35,12 @@ export function SiteOverview() {
             Atrophy is climbing at {s.name} and the last visit was {s.lastVisit.toLowerCase()}. {open.length} open insight{open.length > 1 ? 's' : ''} reference this site — worth pointing your next visit here.
           </AINote>
         )}
-        <Card pad={20}>
-          <Eyebrow right={<LinkBtn onClick={() => navigate(`/sites/${s.id}/insights`)}>View all</LinkBtn>}>
-            Open insights · {s.openInsightsCount}
-          </Eyebrow>
+        <Section
+          title="Open insights"
+          subtitle="Insights raised against this site, most recent first."
+          action={<LinkBtn onClick={() => navigate(`/sites/${s.id}/insights`)}>View all</LinkBtn>}
+          style={{ marginTop: 0 }}
+        >
           {open.length === 0 && (
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, color: colors.inkMuted, fontWeight: 500, padding: '8px 0' }}>No open insights reference this site.</div>
           )}
@@ -47,11 +50,13 @@ export function SiteOverview() {
               <AttnRow key={i.id} label={label} tone={tone} title={i.title} meta={`${i.id} · ${i.observationCount} observation${i.observationCount > 1 ? 's' : ''} · ${i.updated}`} onClick={() => navigate(`/insights/${i.id}`)} last={idx === open.length - 1} />
             );
           })}
-        </Card>
-        <Card pad={20}>
-          <Eyebrow right={<LinkBtn onClick={() => navigate(`/sites/${s.id}/visits`)}>View all</LinkBtn>}>
-            Visit history
-          </Eyebrow>
+        </Section>
+        <Section
+          title="Visit history"
+          subtitle="Recent visits to this site, live or completed."
+          action={<LinkBtn onClick={() => navigate(`/sites/${s.id}/visits`)}>View all</LinkBtn>}
+          style={{ marginTop: 0 }}
+        >
           {history.length === 0 && (
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, color: colors.inkMuted, fontWeight: 500, padding: '8px 0' }}>No visits recorded yet.</div>
           )}
@@ -65,7 +70,7 @@ export function SiteOverview() {
               {v.state === 'live' ? <Badge tone="success" outline icon="circle">Live</Badge> : <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12, fontWeight: 700, color: colors.inkSoft }}>{v.observationCount} obs</span>}
             </ListRow>
           ))}
-        </Card>
+        </Section>
       </div>
     </div>
   );

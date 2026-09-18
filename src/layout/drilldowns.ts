@@ -34,6 +34,7 @@ export function getDrilldown(pathname: string): Drilldown | null {
       { path: `${base}/insights`, label: 'Insights', icon: 'lightbulb' },
       { path: `${base}/incidents`, label: 'Incidents', icon: 'report' },
       { path: `${base}/controls`, label: 'Controls', icon: 'verified' },
+      { path: `${base}/work-streams`, label: 'Work Streams', icon: 'task_alt' },
       { path: `${base}/visits`, label: 'Visits', icon: 'calendar_today' },
       { path: `${base}/observations`, label: 'Observations', icon: 'visibility' },
       { path: `${base}/contacts`, label: 'Contacts', icon: 'contacts' },

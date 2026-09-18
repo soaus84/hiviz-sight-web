@@ -6,11 +6,12 @@ import { SevereIncidentCard } from './SevereIncidentCard';
 import { daysSince, RESOLVED_WINDOW_DAYS } from '@/data/investigations';
 import type { Incident, Investigation } from '@/types';
 
-// Same three-stage shape and column order as InsightsBoard (review/action/
-// closed). 'Needs review' is severe Incidents awaiting the Acknowledge/
-// Progress decision — not Investigation records, since an Investigation
-// doesn't exist yet at that point (see data/investigations.ts's top-of-file
-// note). The other two columns are real Investigation records.
+// Four-stage shape now (2026-09-14 redesign, see
+// [[project_investigation_timeline]]) — 'Needs review' is severe Incidents
+// awaiting the Acknowledge/Progress decision, not Investigation records,
+// since an Investigation doesn't exist yet at that point (see
+// data/investigations.ts's top-of-file note). The other three columns are
+// real Investigation records, one per InvestigationStatus value.
 export function InvestigationsBoard({
   severeIncidents, investigations, onOpenIncident, onOpenInvestigation,
 }: {
@@ -20,12 +21,14 @@ export function InvestigationsBoard({
   onOpenInvestigation: (id: string) => void;
 }) {
   const stacked = useBreakpoint() === 'mobile';
-  const open = investigations.filter((v) => v.status === 'open');
+  const timeline = investigations.filter((v) => v.status === 'timeline');
+  const actions = investigations.filter((v) => v.status === 'actions');
   const closed = investigations.filter((v) => v.status === 'closed' && daysSince(v.updatedAt) <= RESOLVED_WINDOW_DAYS);
 
   const columns = [
     { label: 'Needs review', count: severeIncidents.length, render: () => severeIncidents.map((i) => <SevereIncidentCard key={i.id} i={i} onClick={() => onOpenIncident(i.id)} />) },
-    { label: 'Investigating', count: open.length, render: () => open.map((v) => <InvestigationCard key={v.id} v={v} onClick={() => onOpenInvestigation(v.id)} />) },
+    { label: 'Timeline', count: timeline.length, render: () => timeline.map((v) => <InvestigationCard key={v.id} v={v} onClick={() => onOpenInvestigation(v.id)} />) },
+    { label: 'Actions', count: actions.length, render: () => actions.map((v) => <InvestigationCard key={v.id} v={v} onClick={() => onOpenInvestigation(v.id)} />) },
     { label: `Closed (Last ${RESOLVED_WINDOW_DAYS} days)`, count: closed.length, render: () => closed.map((v) => <InvestigationCard key={v.id} v={v} onClick={() => onOpenInvestigation(v.id)} />) },
   ];
 

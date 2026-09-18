@@ -11,6 +11,7 @@ import { SITES } from '@/data/sites';
 import { energyLabel } from '@/data/observations';
 import { HIGH_RISK_WORK } from '@/data/admin/taxonomies';
 import { SEVERITY_DISPLAY, FREQUENCY_LABEL } from './riskDisplay';
+import { Section } from '@/views/shared/SectionHeading';
 import type { ControlType, CriticalControl, EnergyType, Hazard, SeverityClass, VerificationFrequency, WorksiteControlStatus } from '@/types';
 
 const ENERGY_TYPES: EnergyType[] = ['kinetic', 'gravitational', 'electrical', 'thermal', 'chemical', 'pressure', 'noise_vibration', 'none'];
@@ -220,14 +221,15 @@ export function HazardDetail() {
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: cols, gap: 16, alignItems: 'start' }}>
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft }}>Prevention</div>
-            <LinkBtn icon="add" onClick={() => setControlDraft({ control: null, controlType: 'prevention' })}>Add</LinkBtn>
-          </div>
-          {prevention.length === 0 && <Card pad={16} style={{ textAlign: 'center', color: colors.inkMuted, fontSize: 13 }}>No prevention controls yet.</Card>}
+        <Section
+          title="Prevention"
+          subtitle="Controls that stop this hazard's energy from being released."
+          action={<LinkBtn icon="add" onClick={() => setControlDraft({ control: null, controlType: 'prevention' })}>Add</LinkBtn>}
+          style={{ marginTop: 0 }}
+        >
+          {prevention.length === 0 && <div style={{ textAlign: 'center', color: colors.inkMuted, fontSize: 13 }}>No prevention controls yet.</div>}
           {prevention.map((c) => <ControlCard key={c.id} control={c} onPush={() => handlePush(c.id)} onEdit={() => setControlDraft({ control: c, controlType: c.controlType })} />)}
-        </div>
+        </Section>
 
         <Card pad={20} style={{ textAlign: 'center', background: colors.fill, boxShadow: 'none' }}>
           <Icon name="hub" size={28} color={colors.inkSoft} />
@@ -235,14 +237,15 @@ export function HazardDetail() {
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: colors.inkSoft, marginTop: 6, lineHeight: 1.45 }}>{hazard.description}</div>
         </Card>
 
-        <div>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft }}>Mitigation</div>
-            <LinkBtn icon="add" onClick={() => setControlDraft({ control: null, controlType: 'mitigation' })}>Add</LinkBtn>
-          </div>
-          {mitigation.length === 0 && <Card pad={16} style={{ textAlign: 'center', color: colors.inkMuted, fontSize: 13 }}>No mitigation controls yet.</Card>}
+        <Section
+          title="Mitigation"
+          subtitle="Controls that limit the consequences once this hazard is realised."
+          action={<LinkBtn icon="add" onClick={() => setControlDraft({ control: null, controlType: 'mitigation' })}>Add</LinkBtn>}
+          style={{ marginTop: 0 }}
+        >
+          {mitigation.length === 0 && <div style={{ textAlign: 'center', color: colors.inkMuted, fontSize: 13 }}>No mitigation controls yet.</div>}
           {mitigation.map((c) => <ControlCard key={c.id} control={c} onPush={() => handlePush(c.id)} onEdit={() => setControlDraft({ control: c, controlType: c.controlType })} />)}
-        </div>
+        </Section>
       </div>
 
       {editingHazard && (

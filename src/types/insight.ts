@@ -46,12 +46,14 @@ export interface Endorsement {
   note: string;
 }
 
-/** Manager-entered fields captured while an insight is `action` — three
- * pillars (contain the immediate hazard / tell people / fix the system),
- * each with a "what's needed" and "what happened" side. Neither pillar
- * gates the others — a manager can fill in Learn without Improve, etc.,
- * matching specs/features/CORRECTIVE-ACTIONS.md's "neither phase gates the
- * other" rule in the roadmap spec. */
+/** Retired 2026-09-11 in favour of Work Streams (data/workStreams.ts) — a
+ * manager now pushes real site-tracked Toolbox talk/Learn/Improve streams
+ * instead of filling in free text here, including for the immediate-
+ * containment case ActionFields' own "Control" pillar used to cover (an
+ * Improve stream created immediately, targeting just the relevant site,
+ * covers that need). Kept only so already-closed insights that used the
+ * old mechanism still render their historical outcome (ResolvedPillar in
+ * InsightDetail.tsx) — never written to by anything new. */
 export interface ActionFields {
   controlNeed?: string;
   controlDone?: string;
@@ -74,6 +76,11 @@ export interface Insight {
   observationCount: number;
   supporterInitials: string[];
   energyTypes: EnergyType[];
+  /** -> SAFETY_PRACTICES ids (data/admin/taxonomies.ts) — same rollup
+   * convention as energyTypes above: hand-authored at seed time from the
+   * source observations' own safetyPracticeIds, not derived in code. See
+   * AiClassification's own doc comment, types/observation.ts (2026-09-15). */
+  safetyPracticeIds?: string[];
   updated: string;
   updatedAt: string;
   cause?: string;
@@ -94,7 +101,26 @@ export interface Insight {
   fwClassifications?: FwClassification[];
   endorsements?: Endorsement[];
 
-  // action + resolution — populated once the insight leaves `review`
+  /** CriticalInsight Stage 1's own recommended_actions/recommended_questions/
+   * toolbox_narrative (specs/features/CRITICAL-INSIGHT.md) — read-only AI
+   * context, same "AI has suggested" convention as suggested/suggestedBasis
+   * above and Investigation.aiSuggestedRootCause. Reused as the prefill
+   * source when a manager creates a Work Stream (see data/workStreams.ts) —
+   * never written automatically. Shape confirmed against a real generated
+   * payload 2026-09-11 (see [[project_corrective_actions_enquiry_spec]]):
+   * unlike Investigation's investigation.assist output, none of these carry
+   * a per-item rationale — recommended_actions is ordered {step, action}
+   * pairs with one overall rationale, recommended_questions is plain
+   * strings, and toolbox_narrative is a single ready-to-read block, not a
+   * step list. */
+  aiSuggestedCorrectiveActions?: { step: number; action: string }[];
+  aiSuggestedCorrectiveActionsRationale?: string;
+  aiSuggestedInterviewQuestions?: string[];
+  aiToolboxNarrative?: string;
+
+  // resolution — populated once the insight leaves `review`. `action` is
+  // legacy-only (see ActionFields' own comment) — new insights use Work
+  // Streams instead.
   action?: ActionFields;
   /** How a `closed` insight got there — distinguishes a straight acknowledgement
    * (comment only) from one that went through the action fields above. */

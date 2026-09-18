@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Card, Eyebrow, Badge, Btn, LinkBtn, ListRow } from '@/components';
-import { CRITICAL_CONTROLS, HAZARDS_BY_ID, WORKSITE_CONTROLS, pushControlToSites, statusLabel } from '@/data/risk';
+import { PageHead, Badge, Btn, LinkBtn, ListRow } from '@/components';
+import { CRITICAL_CONTROLS, HAZARDS_BY_ID, WORKSITE_CONTROLS, pushControlToSite, pushControlToSites, statusLabel } from '@/data/risk';
 import { SITES } from '@/data/sites';
 import { HIGH_RISK_WORK } from '@/data/admin/taxonomies';
 import { CONTROL_TYPE_LABEL, FREQUENCY_LABEL, WORKSITE_CONTROL_STATUS_DISPLAY } from './riskDisplay';
 import { ControlEffectivenessCard } from './ControlEffectiveness';
+import { Section } from '@/views/shared/SectionHeading';
 
 /** The full picture for one CriticalControl: how it's actually holding up
  * (ControlEffectivenessCard, unscoped — every site it's reached) and how
@@ -27,6 +28,7 @@ export function ControlDetail() {
   const untargeted = targetSites.filter((s) => !instanceBySite.has(s.id)).length;
 
   const handlePush = () => { pushControlToSites(control.id); forceRender((v) => v + 1); };
+  const handlePushOne = (siteId: string) => { pushControlToSite(control.id, siteId); forceRender((v) => v + 1); };
 
   return (
     <div>
@@ -45,8 +47,11 @@ export function ControlDetail() {
 
       <ControlEffectivenessCard criticalControlId={control.id} />
 
-      <Eyebrow>Rollout · {instanceBySite.size} of {targetSites.length} sites</Eyebrow>
-      <Card pad={20}>
+      <Section
+        title="Rollout"
+        subtitle="Which sites have this control live, and their current verification status."
+        action={<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700, color: colors.inkMuted }}>{instanceBySite.size} of {targetSites.length} sites</span>}
+      >
         {targetSites.map((s, i) => {
           const wc = instanceBySite.get(s.id);
           return (
@@ -57,12 +62,16 @@ export function ControlDetail() {
                   {wc ? (wc.assignedVerifierName ? `${wc.assignedVerifierName} · last verified ${wc.lastVerified ?? '—'}` : 'No verifier assigned') : 'Not pushed to this site'}
                 </div>
               </div>
-              {wc ? <Badge tone={WORKSITE_CONTROL_STATUS_DISPLAY[wc.status].tone}>{statusLabel(wc.status)}</Badge> : <Badge tone="primary" outline>Not pushed</Badge>}
+              {wc ? (
+                <Badge tone={WORKSITE_CONTROL_STATUS_DISPLAY[wc.status].tone}>{statusLabel(wc.status)}</Badge>
+              ) : (
+                <Btn variant="ghost" size="sm" icon="send" onClick={(e) => { e.stopPropagation(); handlePushOne(s.id); }}>Push</Btn>
+              )}
             </ListRow>
           );
         })}
         {targetSites.length === 0 && <div style={{ padding: '20px 4px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>No sites currently doing this work.</div>}
-      </Card>
+      </Section>
     </div>
   );
 }

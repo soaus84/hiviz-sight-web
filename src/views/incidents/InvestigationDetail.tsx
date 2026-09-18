@@ -2,15 +2,27 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
 import { Card, Badge, Btn, AINote, Avatar, Icon, Toggle } from '@/components';
+import { useActiveUser } from '@/state/ActiveUser';
 import { AttnRow } from '@/views/shared/AttnRow';
+import { WorkStreamsSection } from '@/views/shared/WorkStreamsSection';
+import { InvestigationAssist } from '@/views/shared/InvestigationAssist';
+import { Section } from '@/views/shared/SectionHeading';
+import { InvestigationTimeline } from './InvestigationTimeline';
+import { InvestigationFindings } from './InvestigationFindings';
+import { RiskAssessment } from './RiskAssessment';
+import { WitnessStatements } from './WitnessStatements';
+import { deriveFindings } from './findingsView';
 import { INCIDENTS } from '@/data/incidents';
 import { energyLabel } from '@/data/observations';
-import { assignInvestigator, updateFrameworkFields, closeInvestigation, flagSystemicCause } from '@/data/investigations';
+import { SAFETY_PRACTICES } from '@/data/admin/taxonomies';
+import { assignInvestigator, assignManager, updateFrameworkFields, submitInvestigationForApproval, approveInvestigation, closeInvestigation, flagSystemicCause } from '@/data/investigations';
+import { timelineForInvestigation } from '@/data/timeline';
+import { workStreamsFor } from '@/data/workStreams';
 import { USERS } from '@/data/users';
 import { STOP_WORK_EVENTS_BY_ID } from '@/data/stopWork';
 import { INSIGHTS_BY_ID, INSIGHT_KIND_LABEL } from '@/data/insights';
-import { INCIDENT_STATUS_DISPLAY, SEVERITY_DISPLAY, STOP_WORK_STATUS_DISPLAY } from './incidentDisplay';
-import type { ContributingFactor, CorrectiveAction, Incident, Investigation, InvestigationStatus, SharingScope } from '@/types';
+import { INCIDENT_STATUS_DISPLAY, INVESTIGATION_STATUS_DISPLAY, SEVERITY_DISPLAY, STOP_WORK_STATUS_DISPLAY } from './incidentDisplay';
+import type { CorrectiveAction, Incident, Investigation, SharingScope } from '@/types';
 
 /** What to show for an incident's stop-work state, without leaving this
  * screen — an investigator needs to know if the site is still stopped, not
@@ -26,26 +38,22 @@ function stopWorkIndicator(i: Incident): { label: string; tone: Tone } | null {
   return null;
 }
 
-const STATUS: Record<InvestigationStatus, [string, Tone]> = {
-  open: ['Investigating', 'info'],
-  closed: ['Closed', 'success'],
-};
-
-const sectionLabel = { fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' as const, color: colors.inkSoft, margin: '22px 0 10px' };
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const textareaStyle = { width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.4, resize: 'vertical' as const, outline: 'none' };
 const inputStyle = { padding: '7px 9px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 12.5, outline: 'none' };
 
-/** Popover listing real Users to assign as investigator — same shell as
- * InsightDetail's AssigneeMenu. */
-function InvestigatorMenu({ open, onClose, onSelect }: { open: boolean; onClose: () => void; onSelect: (name: string) => void }) {
+/** Popover listing real Users to assign as investigator or manager — same
+ * shell as InsightDetail's AssigneeMenu, parameterised by `label` since the
+ * 2026-09-14 redesign added a second assignable role (see
+ * `Investigation.managerName`'s own doc comment, types/incident.ts). */
+function PersonMenu({ open, onClose, onSelect, label }: { open: boolean; onClose: () => void; onSelect: (name: string) => void; label: string }) {
   if (!open) return null;
   return (
     <>
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, zIndex: 60 }} />
       <div className="a-pop" style={{ position: 'absolute', top: '100%', left: 0, marginTop: 6, width: 230, background: colors.panel, borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-popover)', zIndex: 70, overflow: 'hidden' }}>
         <div style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.8, textTransform: 'uppercase', color: colors.inkMuted, padding: '10px 14px 6px' }}>
-          Assign investigator
+          {label}
         </div>
         {USERS.map((u) => (
           <button
@@ -65,42 +73,18 @@ function InvestigatorMenu({ open, onClose, onSelect }: { open: boolean; onClose:
   );
 }
 
-function FactorList({ factors, onAdd, editable }: { factors: ContributingFactor[]; onAdd: (f: ContributingFactor) => void; editable: boolean }) {
-  const [factor, setFactor] = useState('');
-  const [rationale, setRationale] = useState('');
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-      {factors.map((f, k) => (
-        <div key={k} style={{ border: `1px solid ${colors.ruleSoft}`, borderRadius: 'var(--radius-md)', padding: '10px 12px' }}>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700 }}>{f.factor}</div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontStyle: 'italic', color: colors.inkSoft, marginTop: 3 }}>{f.rationale}</div>
-        </div>
-      ))}
-      {factors.length === 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkMuted, fontWeight: 500 }}>None recorded yet.</div>}
-      {editable && (
-        <div style={{ display: 'flex', gap: 6, marginTop: 2 }}>
-          <input style={{ ...inputStyle, flex: 1 }} placeholder="Contributing factor" value={factor} onChange={(e) => setFactor(e.target.value)} />
-          <input style={{ ...inputStyle, flex: 1 }} placeholder="Rationale" value={rationale} onChange={(e) => setRationale(e.target.value)} />
-          <Btn variant="ghost" size="sm" icon="add" disabled={!factor.trim() || !rationale.trim()} onClick={() => { onAdd({ factor: factor.trim(), rationale: rationale.trim() }); setFactor(''); setRationale(''); }}>Add</Btn>
-        </div>
-      )}
-    </div>
-  );
-}
-
-function ActionList({ actions, onAdd, onToggleDone, editable }: { actions: CorrectiveAction[]; onAdd: (a: CorrectiveAction) => void; onToggleDone: (idx: number) => void; editable: boolean }) {
-  const [action, setAction] = useState('');
-  const [rationale, setRationale] = useState('');
-  const [owner, setOwner] = useState('');
+/** Always read-only now (2026-09-15) — corrective-action dissemination is
+ * the Actions-phase Work Streams section's job (it already pulls Findings'
+ * own recommendations via "Populate with Hiviz suggestions"); this list is
+ * kept only because the closed seeds' entries carry real owner/dueDate/done
+ * history that predates Work Streams and would otherwise be lost. See
+ * [[project_investigation_timeline]]'s Framework audit. */
+function ActionList({ actions }: { actions: CorrectiveAction[] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {actions.map((a, k) => (
         <div key={k} style={{ border: `1px solid ${colors.ruleSoft}`, borderRadius: 'var(--radius-md)', padding: '10px 12px', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-          {editable && (
-            <button onClick={() => onToggleDone(k)} style={{ background: 'none', border: 'none', padding: 0, cursor: 'pointer', marginTop: 1 }}>
-              <Icon name={a.done ? 'check_box' : 'check_box_outline_blank'} size={18} color={a.done ? colors.green : colors.inkMuted} />
-            </button>
-          )}
+          <Icon name={a.done ? 'check_box' : 'check_box_outline_blank'} size={18} color={a.done ? colors.green : colors.inkMuted} style={{ marginTop: 1, flexShrink: 0 }} />
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, textDecoration: a.done ? 'line-through' : undefined, color: a.done ? colors.inkMuted : colors.ink }}>{a.action}</div>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, fontStyle: 'italic', color: colors.inkSoft, marginTop: 3 }}>{a.rationale}</div>
@@ -110,19 +94,7 @@ function ActionList({ actions, onAdd, onToggleDone, editable }: { actions: Corre
           </div>
         </div>
       ))}
-      {actions.length === 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkMuted, fontWeight: 500 }}>None recorded yet — at least one is required to close.</div>}
-      {editable && (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6, marginTop: 2 }}>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input style={{ ...inputStyle, flex: 2 }} placeholder="Corrective action" value={action} onChange={(e) => setAction(e.target.value)} />
-            <input style={{ ...inputStyle, flex: 1 }} placeholder="Owner" value={owner} onChange={(e) => setOwner(e.target.value)} />
-          </div>
-          <div style={{ display: 'flex', gap: 6 }}>
-            <input style={{ ...inputStyle, flex: 1 }} placeholder="Rationale" value={rationale} onChange={(e) => setRationale(e.target.value)} />
-            <Btn variant="ghost" size="sm" icon="add" disabled={!action.trim() || !rationale.trim()} onClick={() => { onAdd({ action: action.trim(), rationale: rationale.trim(), owner: owner.trim() || undefined }); setAction(''); setRationale(''); setOwner(''); }}>Add</Btn>
-          </div>
-        </div>
-      )}
+      {actions.length === 0 && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkMuted, fontWeight: 500 }}>None recorded yet.</div>}
     </div>
   );
 }
@@ -134,42 +106,89 @@ function ActionList({ actions, onAdd, onToggleDone, editable }: { actions: Corre
  * onOpenSource for the same rule in the other direction. */
 export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, onChanged }: { v: Investigation; onOpenIncident?: (id: string) => void; onOpenSystemicInsight?: (insightId: string) => void; onChanged?: () => void }) {
   const navigate = useNavigate();
-  const [sl, sh] = STATUS[v.status];
+  const { user } = useActiveUser();
+  const status = INVESTIGATION_STATUS_DISPLAY[v.status];
   const severity = SEVERITY_DISPLAY[v.severityClass];
   const srcIncidents = INCIDENTS.filter((i) => i.linkedInvestigationId === v.id);
+  // Scopes the Timeline/Findings control pickers to the work type(s) this
+  // investigation's own incidents actually occurred under — see
+  // data/risk.ts's controlsForWorkTypes and [[project_investigation_timeline]].
+  const relevantWorkTypeIds = [...new Set(srcIncidents.map((i) => i.workTypeId).filter((id): id is string => !!id))];
+  // Whatever source incidents happen to carry their own stop-work event —
+  // usually 0 or 1 — surfaced live on the Timeline (InvestigationTimeline's
+  // StopWorkBanner), never a stored snapshot. Barrier failures would get the
+  // same treatment but there's no Incident<->BarrierFailure link to source
+  // one from yet (see [[project_deferred_risk_incident_ideas]]).
+  const stopWorkEventIds = [...new Set(srcIncidents.map((i) => i.stopWorkEventId).filter((id): id is string => !!id))];
+  const timelineEvents = timelineForInvestigation(v.id);
+  const findings = deriveFindings(timelineEvents);
 
   const [investigatorMenuOpen, setInvestigatorMenuOpen] = useState(false);
+  const [managerMenuOpen, setManagerMenuOpen] = useState(false);
   const [immediateCause, setImmediateCause] = useState(v.immediateCause ?? '');
   const [rootCause, setRootCause] = useState(v.rootCause ?? '');
-  const [closeError, setCloseError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
   const [systemicOpen, setSystemicOpen] = useState(false);
   const [systemicSummary, setSystemicSummary] = useState(v.rootCause ?? '');
   const [systemicError, setSystemicError] = useState<string | null>(null);
 
-  const editable = v.status === 'open';
+  // 2026-09-14 redesign (see [[project_investigation_timeline]]): the old
+  // single 'open'-derived `editable` boolean split in two, one per phase —
+  // canEditTimeline covers everything that used to be gated on 'open'
+  // (Framework fields, Findings, the Timeline itself), canEditActions is new
+  // and gates Work Stream creation, which now belongs to its own phase
+  // rather than being available throughout 'open'.
+  const canEditTimeline = v.status === 'timeline';
+  const canEditActions = v.status === 'actions';
+  // investigation.assist's output — only worth showing while the
+  // investigator is still working the framework; superseded by the
+  // investigator's own confirmed fields (and later, real fwClassifications)
+  // once past that phase. Narrowed to root cause/contributing factors/factor
+  // hint only (2026-09-18) — suggested interview questions and corrective
+  // actions were dropped from "The story so far" itself since they now have
+  // real homes on this same page (Witness Statements pre-populates from
+  // aiSuggestedInterviewQuestions; Work Streams' own "Populate with Hiviz
+  // suggestions" already surfaces aiSuggestedCorrectiveActions in the
+  // Actions phase) — showing them again here was pure duplication, and
+  // `hasInvestigationAssist`'s broader check (which also counts those two
+  // fields) would otherwise gate this section open with nothing left to show
+  // if an investigation only ever had those two populated.
+  const hasAiAssist = canEditTimeline && !!(v.aiSuggestedRootCause || v.aiSuggestedContributingFactors?.length || v.aiFactorHint);
   const suggestsSystemic = v.fwClassifications?.some((f) => f.domain === 'guide' || f.domain === 'enable') ?? false;
 
-  const handleAssign = (name: string) => {
+  const handleAssignInvestigator = (name: string) => {
     assignInvestigator(v.id, name);
     setInvestigatorMenuOpen(false);
     onChanged?.();
   };
-  const patchImmediateCause = (val: string) => { setImmediateCause(val); updateFrameworkFields(v.id, { immediateCause: val }); };
-  const patchRootCause = (val: string) => { setRootCause(val); updateFrameworkFields(v.id, { rootCause: val }); };
-  const addFactor = (f: ContributingFactor) => { updateFrameworkFields(v.id, { contributingFactors: [...(v.contributingFactors ?? []), f] }); onChanged?.(); };
-  const addAction = (a: CorrectiveAction) => { updateFrameworkFields(v.id, { correctiveActions: [...(v.correctiveActions ?? []), a] }); onChanged?.(); };
-  const toggleActionDone = (idx: number) => {
-    const next = (v.correctiveActions ?? []).map((a, k) => (k === idx ? { ...a, done: !a.done } : a));
-    updateFrameworkFields(v.id, { correctiveActions: next });
+  const handleAssignManager = (name: string) => {
+    assignManager(v.id, name);
+    setManagerMenuOpen(false);
     onChanged?.();
   };
+  const patchImmediateCause = (val: string) => { setImmediateCause(val); updateFrameworkFields(v.id, { immediateCause: val }); };
+  const patchRootCause = (val: string) => { setRootCause(val); updateFrameworkFields(v.id, { rootCause: val }); };
   const setClearedForSharing = (checked: boolean) => { updateFrameworkFields(v.id, { clearedForSharing: checked }); onChanged?.(); };
   const setSharingScope = (scope: SharingScope) => { updateFrameworkFields(v.id, { sharingScope: scope }); onChanged?.(); };
   const setLegalHold = (checked: boolean) => { updateFrameworkFields(v.id, { legalHold: checked }); onChanged?.(); };
 
+  // The two-signoff gate — see InvestigationStatus's own doc comment
+  // (types/incident.ts). Submitting doesn't change status by itself;
+  // approving is what actually advances 'timeline' -> 'actions'.
+  const handleSubmit = () => {
+    const result = submitInvestigationForApproval(v.id, user.name, findings.length > 0);
+    setActionError(result.error ?? null);
+    if (!result.error) onChanged?.();
+  };
+  const handleApprove = () => {
+    const result = approveInvestigation(v.id, user.name);
+    setActionError(result.error ?? null);
+    if (!result.error) onChanged?.();
+  };
   const handleClose = () => {
-    const result = closeInvestigation(v.id);
-    setCloseError(result.error ?? null);
+    const hasLiveWorkStream = workStreamsFor('investigation', v.id).some((w) => w.status !== 'draft');
+    const result = closeInvestigation(v.id, hasLiveWorkStream);
+    setActionError(result.error ?? null);
     if (!result.error) onChanged?.();
   };
   const handleFlagSystemic = () => {
@@ -181,9 +200,10 @@ export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, 
   return (
     <Card pad={24}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12, flexWrap: 'wrap' }}>
-        <Badge tone={sh}>{sl}</Badge>
+        <Badge tone={status.tone}>{status.label}</Badge>
         <Badge tone={severity.tone} outline>{severity.label}</Badge>
         {v.legalHold && <Badge tone="error" outline icon="lock">Legal hold</Badge>}
+        {v.status === 'timeline' && v.submittedAt && <Badge tone="primary" outline icon="hourglass_top">Awaiting approval</Badge>}
         <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11.5, fontWeight: 700, color: colors.inkSoft, marginLeft: 'auto' }}>{v.id}</span>
       </div>
       <h2 style={{ fontFamily: 'var(--font-sans)', margin: 0, fontSize: 23, fontWeight: 700, letterSpacing: -0.5, lineHeight: 1.2 }}>{v.title}</h2>
@@ -192,55 +212,162 @@ export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, 
         {v.siteNames.map((s, k) => <Badge key={k} tone="primary" outline icon="place">{s}</Badge>)}
       </div>
 
-      <div style={{ position: 'relative', marginTop: 14, background: colors.fill, borderRadius: 'var(--radius-lg)', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-        <button
-          onClick={() => setInvestigatorMenuOpen((val) => !val)}
-          style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
-        >
-          {v.investigatorName ? <Avatar name={v.investigatorName} size={26} /> : (
-            <div style={{ width: 26, height: 26, borderRadius: '50%', background: colors.rule, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-              <Icon name="person" size={14} color={colors.inkMuted} />
-            </div>
+      <div style={{ position: 'relative', marginTop: 14, background: colors.fill, borderRadius: 'var(--radius-lg)', padding: '10px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setInvestigatorMenuOpen((val) => !val)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4, width: 68, textAlign: 'left', flexShrink: 0 }}>Investigator</span>
+              {v.investigatorName ? <Avatar name={v.investigatorName} size={26} /> : (
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: colors.rule, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="person" size={14} color={colors.inkMuted} />
+                </div>
+              )}
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 500, color: v.investigatorName ? colors.ink : colors.inkMuted }}>{v.investigatorName || 'Unassigned'}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, color: colors.ink, textDecoration: 'underline', textTransform: 'uppercase' }}>{v.investigatorName ? 'Reassign' : 'Assign'}</span>
+            </button>
+            <PersonMenu open={investigatorMenuOpen} onClose={() => setInvestigatorMenuOpen(false)} onSelect={handleAssignInvestigator} label="Assign investigator" />
+          </div>
+          <div style={{ position: 'relative' }}>
+            <button
+              onClick={() => setManagerMenuOpen((val) => !val)}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'none', border: 'none', padding: 0, cursor: 'pointer' }}
+            >
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4, width: 68, textAlign: 'left', flexShrink: 0 }}>Manager</span>
+              {v.managerName ? <Avatar name={v.managerName} size={26} /> : (
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: colors.rule, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="shield_person" size={14} color={colors.inkMuted} />
+                </div>
+              )}
+              <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 500, color: v.managerName ? colors.ink : colors.inkMuted }}>{v.managerName || 'Unassigned'}</span>
+              <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, color: colors.ink, textDecoration: 'underline', textTransform: 'uppercase' }}>{v.managerName ? 'Reassign' : 'Assign'}</span>
+            </button>
+            <PersonMenu open={managerMenuOpen} onClose={() => setManagerMenuOpen(false)} onSelect={handleAssignManager} label="Assign manager" />
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          {v.status === 'timeline' && !v.submittedAt && (
+            <Btn variant="primary" size="sm" icon="arrow_forward" onClick={handleSubmit}>Submit for approval</Btn>
           )}
-          <span style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontWeight: 500, color: v.investigatorName ? colors.ink : colors.inkMuted }}>{v.investigatorName || 'Unassigned'}</span>
-          <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.4, color: colors.ink, textDecoration: 'underline', textTransform: 'uppercase' }}>{v.investigatorName ? 'Reassign' : 'Assign'}</span>
-        </button>
-        <InvestigatorMenu open={investigatorMenuOpen} onClose={() => setInvestigatorMenuOpen(false)} onSelect={handleAssign} />
-        {v.status === 'open' && (
-          <div>
+          {v.status === 'timeline' && v.submittedAt && (
+            <Btn variant="primary" size="sm" icon="check" onClick={handleApprove}>Approve</Btn>
+          )}
+          {v.status === 'actions' && (
             <Btn variant="primary" size="sm" icon="check" onClick={handleClose}>Close investigation</Btn>
+          )}
+        </div>
+      </div>
+      {actionError && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.red, fontWeight: 600, marginTop: 8 }}>{actionError}</div>}
+
+      {/* Energy/keyHazard/safetyPracticeIds are static facts carried over
+       * from the source Incident at openInvestigationFromIncident time (see
+       * their own doc comment, types/incident.ts) — never re-classified here
+       * (see [[project_investigation_timeline]]'s roadmap-spec check:
+       * INVESTIGATION.md is explicit that investigation jobs consume
+       * "already-confirmed... classified energy/barrier values from the
+       * upstream incident — no independent classification happens here").
+       * Grouped as one "Incident context" block and moved up here (2026-09-17
+       * regroup) — previously these sat after Framework/Work Streams, far
+       * from the story they give context to. Deliberately kept separate from
+       * "The story so far" below rather than merged into it: this context is
+       * always present regardless of phase, while the story below only
+       * exists during 'timeline' with investigation.assist output — folding
+       * a phase-gated block and an always-on one together would make the
+       * always-on content flicker in and out of a section that's sometimes
+       * there and sometimes not. Forge Works Map® classification (below,
+       * near Systemic cause phase) is deliberately NOT in this group either
+       * — it's the investigation's own Stage 5 output, produced at close,
+       * not an inherited incident fact, so it stays next to the systemic
+       * cause phase it actually informs. */}
+      <Section title="Incident context" subtitle="Energy type, key hazard, and safety practices carried over from the source incident.">
+        <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Energy classification</div>
+        <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap', marginBottom: (v.keyHazard || !!v.safetyPracticeIds?.length) ? 14 : 0 }}>
+          {v.energyTypes.map((e, k) => <Badge key={k} tone={e === 'none' ? 'warning' : 'error'} outline>{energyLabel(e)}</Badge>)}
+        </div>
+        {v.keyHazard && (
+          <div style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', marginBottom: v.safetyPracticeIds?.length ? 14 : 0 }}>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Key hazard</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700, marginBottom: 4 }}>{v.keyHazard.title}</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontStyle: 'italic', color: colors.inkSoft, lineHeight: 1.45 }}>{v.keyHazard.rationale}</div>
           </div>
         )}
-      </div>
-      {closeError && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.red, fontWeight: 600, marginTop: 8 }}>{closeError}</div>}
+        {!!v.safetyPracticeIds?.length && (
+          <>
+            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase', letterSpacing: 0.4, marginBottom: 6 }}>Safety practices</div>
+            <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+              {v.safetyPracticeIds.map((id) => {
+                const p = SAFETY_PRACTICES.find((s) => s.id === id);
+                return p ? <Badge key={id} tone="primary" outline icon={p.icon}>{p.name}</Badge> : null;
+              })}
+            </div>
+          </>
+        )}
+      </Section>
 
-      <div style={sectionLabel}>Framework</div>
-      <Card pad={16} style={{ boxShadow: 'none' }}>
+      {/* The AI-generated story sits above the Timeline on purpose — it's
+       * the orienting narrative a reader should have *before* working
+       * through the event-by-event reconstruction, same reasoning Insight
+       * puts its own Pattern Summary before Source observations. Used to
+       * live nested inside the Framework card below, which put it after
+       * both the Timeline and the Findings it should actually inform —
+       * moved 2026-09-15 per a direct audit request. Its own
+       * aiSuggestedContributingFactors/aiSuggestedCorrectiveActions/
+       * interview-question rationale stay visible here throughout — while
+       * the action text itself (once a Work Stream exists) is also
+       * reachable via "Populate with Hiviz suggestions" on the
+       * improve/learn draft, the per-item *rationale* has no home there
+       * (Work Stream steps deliberately carry no rationale — see
+       * WorkStreamStep's own doc comment), so this AI panel is the only
+       * place it's shown. The old manual "Contributing factors" list this
+       * used to also feed was removed outright (see Framework audit,
+       * [[project_investigation_timeline]]) — every instance of it was
+       * fully duplicated by a real Finding. */}
+      {hasAiAssist && (
+        <Section title="The story so far" subtitle="Hiviz's orienting read on what happened — worth reading before working through the timeline below." pad={16}>
+          <InvestigationAssist
+            aiSuggestedRootCause={v.aiSuggestedRootCause}
+            aiSuggestedRootCauseRationale={v.aiSuggestedRootCauseRationale}
+            aiSuggestedContributingFactors={v.aiSuggestedContributingFactors}
+            aiFactorHint={v.aiFactorHint}
+          />
+        </Section>
+      )}
+
+      <InvestigationTimeline investigationId={v.id} canEdit={canEditTimeline} onChanged={onChanged} relevantWorkTypeIds={relevantWorkTypeIds} aiSuggestedTimelineEvents={v.aiSuggestedTimelineEvents} stopWorkEventIds={stopWorkEventIds} onOpenIncident={onOpenIncident} />
+      <WitnessStatements investigationId={v.id} canEdit={canEditTimeline} witnessStatements={v.witnessStatements ?? []} aiSuggestedInterviewQuestions={v.aiSuggestedInterviewQuestions} onChanged={onChanged} />
+      <RiskAssessment investigationId={v.id} canEdit={canEditTimeline} controlAssessments={v.controlAssessments ?? []} relevantWorkTypeIds={relevantWorkTypeIds} onChanged={onChanged} />
+      <InvestigationFindings investigationId={v.id} canEdit={canEditTimeline} onChanged={onChanged} relevantWorkTypeIds={relevantWorkTypeIds} />
+
+      <Section title="Framework" subtitle="Immediate and root cause, plus this investigation's sharing scope and legal-hold status." pad={16}>
         <label style={fieldLabel}>Immediate cause</label>
-        {editable ? (
+        {canEditTimeline ? (
           <textarea className="a-input" value={immediateCause} onChange={(e) => patchImmediateCause(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 14 }} />
         ) : (
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>{v.immediateCause || '—'}</div>
         )}
 
-        <label style={fieldLabel}>Contributing factors</label>
-        <div style={{ marginBottom: 14 }}>
-          <FactorList factors={v.contributingFactors ?? []} onAdd={addFactor} editable={editable} />
-        </div>
-
         <label style={fieldLabel}>Root cause</label>
-        {editable ? (
+        {canEditTimeline ? (
           <textarea className="a-input" value={rootCause} onChange={(e) => patchRootCause(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 14 }} />
         ) : (
           <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.5, marginBottom: 14 }}>{v.rootCause || '—'}</div>
         )}
 
-        <label style={fieldLabel}>Corrective actions</label>
-        <div style={{ marginBottom: editable ? 14 : 0 }}>
-          <ActionList actions={v.correctiveActions ?? []} onAdd={addAction} onToggleDone={toggleActionDone} editable={editable} />
-        </div>
+        {(v.correctiveActions?.length ?? 0) > 0 && (
+          <>
+            <label style={fieldLabel}>Corrective actions</label>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12, color: colors.inkMuted, fontStyle: 'italic', marginBottom: 8 }}>
+              Legacy entries, kept for reference — dissemination now happens via Work Streams below.
+            </div>
+            <div style={{ marginBottom: 14 }}>
+              <ActionList actions={v.correctiveActions ?? []} />
+            </div>
+          </>
+        )}
 
-        {editable && (
+        {canEditTimeline && (
           <>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, marginTop: 14, borderTop: `1px solid ${colors.ruleSoft}` }}>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600 }}>Cleared for sharing</div>
@@ -266,19 +393,35 @@ export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, 
             </div>
           </>
         )}
-        {!editable && (
+        {!canEditTimeline && (
           <div style={{ display: 'flex', gap: 16, paddingTop: 14, marginTop: 14, borderTop: `1px solid ${colors.ruleSoft}`, fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, fontWeight: 500 }}>
             <span>Cleared for sharing: <strong style={{ color: colors.ink }}>{v.clearedForSharing ? `Yes · ${v.sharingScope ?? 'site'}` : 'No'}</strong></span>
             <span>Legal hold: <strong style={{ color: colors.ink }}>{v.legalHold ? 'Yes' : 'No'}</strong></span>
           </div>
         )}
-      </Card>
+      </Section>
+
+      {/* aiSuggestedActions now merges Findings' own recommendations
+       * alongside investigation.assist's AI output — "Populate with Hiviz
+       * suggestions" is the same mechanism either way, sourced from
+       * whichever content exists. The button's own label still says "Hiviz
+       * suggestions" even when a Finding (human-authored) is the source —
+       * a known holdover from this being an incremental build, worth
+       * revisiting once the Findings mechanism settles (see
+       * [[project_investigation_timeline]]). */}
+      <WorkStreamsSection
+        sourceType="investigation" sourceId={v.id} siteNames={v.siteNames} canAdd={canEditActions}
+        aiSuggestedQuestions={v.aiSuggestedInterviewQuestions?.map((q) => ({ text: q.question }))}
+        aiSuggestedActions={[
+          ...(v.aiSuggestedCorrectiveActions?.map((a) => ({ text: a.action })) ?? []),
+          ...findings.map((f) => ({ text: f.context.recommendation! })),
+        ]}
+      />
 
       {v.fwClassifications && v.fwClassifications.length > 0 && (
-        <>
-          <div style={sectionLabel}>Forge Works Map® classification</div>
+        <Section title="Forge Works Map® classification" subtitle="Factors classified against the Forge Works Map®, each with a confidence score and rationale.">
           {v.fwClassifications.map((f, k) => (
-            <div key={k} style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', marginBottom: 8 }}>
+            <div key={k} style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', marginBottom: k === v.fwClassifications!.length - 1 ? 0 : 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700 }}>{f.factor}</span>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase' }}>{f.domain}</span>
@@ -289,17 +432,11 @@ export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, 
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontStyle: 'italic', color: colors.inkSoft, lineHeight: 1.45 }}>{f.rationale}</div>
             </div>
           ))}
-        </>
+        </Section>
       )}
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Energy classification</div>
-      <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
-        {v.energyTypes.map((e, k) => <Badge key={k} tone={e === 'none' ? 'warning' : 'error'} outline>{energyLabel(e)}</Badge>)}
-      </div>
-
       {v.status === 'closed' && (
-        <>
-          <div style={sectionLabel}>Systemic cause phase</div>
+        <Section title="Systemic cause phase" subtitle="Whether this investigation's findings point to a wider pattern worth raising as an Insight.">
           {v.systemicCauseInsightId ? (
             <>
               <AINote title="Bridged to the Insight pipeline">
@@ -354,17 +491,19 @@ export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, 
               )}
             </>
           )}
-        </>
+        </Section>
       )}
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Source incidents</span><span style={{ color: colors.inkMuted }}>{srcIncidents.length}</span>
-      </div>
-      {srcIncidents.length === 0 && (
-        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkMuted, fontWeight: 500 }}>No incidents linked yet.</div>
-      )}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {srcIncidents.map((i) => {
+      <Section
+        title="Source incidents"
+        subtitle="The incidents this investigation was opened to explain."
+        action={<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700, color: colors.inkMuted }}>{srcIncidents.length}</span>}
+      >
+        {srcIncidents.length === 0 && (
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkMuted, fontWeight: 500 }}>No incidents linked yet.</div>
+        )}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {srcIncidents.map((i) => {
           const status = INCIDENT_STATUS_DISPLAY[i.status];
           const stopWork = stopWorkIndicator(i);
           return (
@@ -389,7 +528,8 @@ export function InvestigationDetail({ v, onOpenIncident, onOpenSystemicInsight, 
             </div>
           );
         })}
-      </div>
+        </div>
+      </Section>
     </Card>
   );
 }

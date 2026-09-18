@@ -31,8 +31,9 @@ function stopWorkNeedsDecision<T extends { stopWorkWarranted?: boolean; stopWork
  *   the owner assignment are both manager actions from the moment an
  *   insight lands in review. Fully in.
  * - Investigation: severe Incidents (`status: 'severe'`) awaiting the
- *   Acknowledge/Progress triage, and open Investigations awaiting an
- *   investigatorName assignment, are both manager actions. Fully in.
+ *   Acknowledge/Progress triage, and active (non-closed) Investigations
+ *   awaiting an investigatorName assignment, are both manager actions.
+ *   Fully in.
  * - Stop Work is two genuinely different manager touchpoints now, not one:
  *   `stopWorkIncidentDecisions`/`stopWorkBarrierFailureDecisions` are the
  *   warranted-but-not-called divergence on an Incident or BarrierFailure —
@@ -92,7 +93,11 @@ export function computeFocusItems(purview: PurviewFilter, userName: string): Foc
   const insightsMine = insightsInPurview.filter((i) => i.owner === userName);
   const insightsUnassigned = insightsInPurview.filter((i) => !i.owner);
 
-  const investigationsInPurview = INVESTIGATIONS.filter((v) => v.status === 'open' && investigationInRegion(v, purview));
+  // Both non-closed statuses count as "still needs someone's attention" —
+  // 2026-09-14 redesign split the old single 'open' status into
+  // 'timeline'/'actions' (see [[project_investigation_timeline]]), neither
+  // of which is more or less Focus-worthy than the other was before.
+  const investigationsInPurview = INVESTIGATIONS.filter((v) => v.status !== 'closed' && investigationInRegion(v, purview));
   const investigationsMine = investigationsInPurview.filter((v) => v.investigatorName === userName);
   const investigationsUnassigned = investigationsInPurview.filter((v) => !v.investigatorName);
 
@@ -123,7 +128,7 @@ export function countFocusItems(purview: PurviewFilter, userName: string): numbe
 // needs to cover every status, not just review, or the Action and Resolved
 // tabs would silently show the same unfiltered company-wide list Focus
 // never would. The rule stays the same one from computeFocusItems's own
-// note: mine (any status) + unassigned (review/open only, since action/
+// note: mine (any status) + unassigned (review/timeline/actions only, since
 // closed items are past the point where "unassigned" is meaningful).
 
 export function myInsightRows(purview: PurviewFilter, userName: string): Insight[] {
@@ -132,16 +137,18 @@ export function myInsightRows(purview: PurviewFilter, userName: string): Insight
 
 export interface MyInvestigationRows {
   severeIncidents: Incident[];
-  openInvestigations: Investigation[];
+  timelineInvestigations: Investigation[];
+  actionsInvestigations: Investigation[];
   closedInvestigations: Investigation[];
 }
 
 export function myInvestigationRows(purview: PurviewFilter, userName: string): MyInvestigationRows {
   const severeIncidents = INCIDENTS.filter((i) => i.status === 'severe' && incidentInRegion(i, purview));
   const investigationsInPurview = INVESTIGATIONS.filter((v) => investigationInRegion(v, purview));
-  const openInvestigations = investigationsInPurview.filter((v) => v.status === 'open' && (v.investigatorName === userName || !v.investigatorName));
+  const timelineInvestigations = investigationsInPurview.filter((v) => v.status === 'timeline' && (v.investigatorName === userName || !v.investigatorName));
+  const actionsInvestigations = investigationsInPurview.filter((v) => v.status === 'actions' && (v.investigatorName === userName || !v.investigatorName));
   const closedInvestigations = investigationsInPurview.filter((v) => v.status === 'closed' && v.investigatorName === userName);
-  return { severeIncidents, openInvestigations, closedInvestigations };
+  return { severeIncidents, timelineInvestigations, actionsInvestigations, closedInvestigations };
 }
 
 /** Real authorship, not purview-derived — a visit stays yours regardless of

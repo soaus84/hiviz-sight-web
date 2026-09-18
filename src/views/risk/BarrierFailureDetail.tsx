@@ -9,11 +9,11 @@ import { resolveDirectly, submitForReview, approve, returnForRevision, sentBackC
 import { STOP_WORK_EVENTS_BY_ID, callStopWork, dismissStopWorkWarning } from '@/data/stopWork';
 import { STOP_WORK_STATUS_DISPLAY } from '@/views/incidents/incidentDisplay';
 import { BARRIER_FAILURE_STATUS_DISPLAY, CONTROL_TYPE_LABEL, SEVERITY_DISPLAY } from './riskDisplay';
+import { Section } from '@/views/shared/SectionHeading';
 import type { BarrierFailure, BarrierFailureRound } from '@/types';
 
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const textareaStyle = { width: '100%', padding: '8px 10px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13, lineHeight: 1.4, resize: 'vertical' as const, outline: 'none' };
-const sectionLabel = { fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' as const, color: colors.inkSoft, margin: '22px 0 10px' };
 
 // Same fixed narrative "now" the rest of the mock data uses.
 const MOCK_NOW = new Date('2025-05-07T10:00:00');
@@ -124,8 +124,9 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
         {pastSla && <Badge tone="error" outline icon="schedule">Past SLA</Badge>}
       </div>
 
-      <div style={sectionLabel}>What was flagged</div>
-      <AINote title={`Reported by ${b.flaggedBy} · ${b.when}`}>{b.notes}</AINote>
+      <Section title="What was flagged" subtitle="The original report — what was flagged, by whom, and when." pad={16}>
+        <AINote title={`Reported by ${b.flaggedBy} · ${b.when}`}>{b.notes}</AINote>
+      </Section>
 
       {needsStopWorkDecision && (
         <Card pad={16} style={{ marginTop: 16, border: `1px solid ${colors.red}`, boxShadow: 'none' }}>
@@ -210,11 +211,10 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
 
       {b.status === 'review' && (
         <>
-          <div style={sectionLabel}>Submitted for review</div>
-          <Card pad={16} style={{ boxShadow: 'none' }}>
+          <Section title="Submitted for review" subtitle="What the site says was done, awaiting your approval." pad={16}>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, lineHeight: 1.55 }}>{b.resolutionNote}</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 8 }}>— {b.resolvedBy}</div>
-          </Card>
+          </Section>
           {!sendBackOpen ? (
             <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
               <Btn variant="ghost" onClick={() => setSendBackOpen(true)}>Send back</Btn>
@@ -238,11 +238,10 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
 
       {b.status === 'returned' && (
         <>
-          <div style={sectionLabel}>Sent back to you</div>
-          <Card pad={16} style={{ boxShadow: 'none', borderLeft: `3px solid ${colors.red}` }}>
+          <Section title="Sent back to you" subtitle="Why this was returned — what needs to change before resubmitting." pad={16}>
             <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, lineHeight: 1.55 }}>{lastReturn?.note}</div>
             <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 8 }}>— {lastReturn?.by}</div>
-          </Card>
+          </Section>
           <div style={{ marginTop: 16 }}>
             {!resolveOpen ? (
               <Btn variant="primary" icon="check" onClick={() => setResolveOpen(true)}>Confirm and resubmit</Btn>
@@ -266,56 +265,46 @@ export function BarrierFailureDetail({ b, onChanged }: { b: BarrierFailure; onCh
       )}
 
       {b.status === 'resolved' && (
-        <>
-          <div style={sectionLabel}>Resolution</div>
-          <Card pad={16} style={{ boxShadow: 'none' }}>
-            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, lineHeight: 1.55 }}>{b.resolutionNote}</div>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 8 }}>— {b.resolvedBy}</div>
-          </Card>
-        </>
+        <Section title="Resolution" subtitle="What was done to close this out." pad={16}>
+          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, lineHeight: 1.55 }}>{b.resolutionNote}</div>
+          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, marginTop: 8 }}>— {b.resolvedBy}</div>
+        </Section>
       )}
 
       {timeline.length > 0 && (
-        <>
-          <div style={sectionLabel}>Story</div>
-          <Card pad={4} style={{ boxShadow: 'none' }}>
-            {timeline.map((t, i) => (
-              <div key={i} style={{ padding: '10px 12px', borderTop: i === 0 ? undefined : `1px solid ${colors.ruleSoft}` }}>
-                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700 }}>{t.label} · {t.by}</span>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, whiteSpace: 'nowrap' }}>{formatWhen(t.at)}</span>
-                </div>
-                {t.note && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, lineHeight: 1.5, marginTop: 4 }}>{t.note}</div>}
+        <Section title="Story" subtitle="This barrier failure's review history, in order." pad={4}>
+          {timeline.map((t, i) => (
+            <div key={i} style={{ padding: '10px 12px', borderTop: i === 0 ? undefined : `1px solid ${colors.ruleSoft}` }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700 }}>{t.label} · {t.by}</span>
+                <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, whiteSpace: 'nowrap' }}>{formatWhen(t.at)}</span>
               </div>
-            ))}
-          </Card>
-        </>
+              {t.note && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, lineHeight: 1.5, marginTop: 4 }}>{t.note}</div>}
+            </div>
+          ))}
+        </Section>
       )}
 
-      <div style={sectionLabel}>Detail</div>
-      <Card pad={16}>
+      <Section title="Detail" subtitle="Site, control type, and the hazard this control failure exposed.">
         <Fact k="Flagged by" v={b.flaggedBy} />
         <Fact k="Site" v={b.siteName} />
         <Fact k="When" v={b.when} />
         <Fact k="Control type" v={CONTROL_TYPE_LABEL[b.controlType]} />
         <Fact k="Hazard" v={b.hazardName} last />
-      </Card>
+      </Section>
 
       {stopWorkEvent && (
-        <>
-          <div style={{ ...sectionLabel, margin: '16px 0 10px' }}>Stop work</div>
-          <Card pad={4} style={{ boxShadow: 'none' }}>
-            <AttnRow
-              label={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].label}
-              icon="front_hand"
-              tone={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].tone}
-              title={stopWorkEvent.workType}
-              meta={`${stopWorkEvent.siteName}${stopWorkEvent.siteWide ? ' · Site-wide' : ''}`}
-              last external
-              onClick={() => navigate(`/incidents/stop-work?id=${stopWorkEvent.id}`)}
-            />
-          </Card>
-        </>
+        <Section title="Stop work" subtitle="This control failure's live stop-work status." pad={4}>
+          <AttnRow
+            label={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].label}
+            icon="front_hand"
+            tone={STOP_WORK_STATUS_DISPLAY[stopWorkEvent.status].tone}
+            title={stopWorkEvent.workType}
+            meta={`${stopWorkEvent.siteName}${stopWorkEvent.siteWide ? ' · Site-wide' : ''}`}
+            last external
+            onClick={() => navigate(`/incidents/stop-work?id=${stopWorkEvent.id}`)}
+          />
+        </Section>
       )}
     </Card>
   );

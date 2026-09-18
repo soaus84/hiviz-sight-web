@@ -3,10 +3,16 @@ import { useNavigate } from 'react-router-dom';
 import { colors, type Tone } from '@/tokens';
 import { Card, Badge, Btn, LinkBtn, AINote, Avatar, Icon, ListRow } from '@/components';
 import { OBSERVATIONS, SIGNAL_DISPLAY, energyLabel } from '@/data/observations';
-import { INSIGHT_KIND_LABEL, moveToAction, addSupport, assignOwner, acknowledgeAndResolve, updateActionFields, resolveActionedInsight } from '@/data/insights';
+import { SAFETY_PRACTICES } from '@/data/admin/taxonomies';
+import { INSIGHT_KIND_LABEL, moveToAction, addSupport, assignOwner, acknowledgeAndResolve, resolveActionedInsight } from '@/data/insights';
 import { useActiveUser } from '@/state/ActiveUser';
 import { USERS } from '@/data/users';
-import type { ActionFields, Insight, InsightStatus, Observation } from '@/types';
+import { WorkStreamsSection } from '@/views/shared/WorkStreamsSection';
+import { WORK_STREAM_KIND_DISPLAY } from '@/views/shared/workStreamDisplay';
+import { SuggestionCard } from '@/views/shared/SuggestionCard';
+import { Section } from '@/views/shared/SectionHeading';
+import { workStreamsFor } from '@/data/workStreams';
+import type { Insight, InsightStatus, Observation, WorkStream } from '@/types';
 
 const STATUS: Record<InsightStatus, [string, Tone]> = {
   review: ['Needs review', 'warning'],
@@ -37,19 +43,18 @@ function fallbackSourceObs(i: Insight): Observation[] {
   return result;
 }
 
-function ActionRow({ label, needLabel, doneLabel, need, done, onNeedChange, onDoneChange, first }: {
-  label: string; needLabel: string; doneLabel: string; need: string; done: string;
-  onNeedChange: (v: string) => void; onDoneChange: (v: string) => void; first?: boolean;
-}) {
-  return (
-    <div style={{ paddingTop: first ? 0 : 14, marginTop: first ? 0 : 14, borderTop: first ? undefined : `1px solid ${colors.ruleSoft}` }}>
-      <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 700, marginBottom: 8 }}>{label}</div>
-      <label style={fieldLabel}>{needLabel}</label>
-      <textarea className="a-input" value={need} onChange={(e) => onNeedChange(e.target.value)} rows={2} style={{ ...textareaStyle, marginBottom: 8 }} />
-      <label style={fieldLabel}>{doneLabel}</label>
-      <textarea className="a-input" value={done} onChange={(e) => onDoneChange(e.target.value)} rows={2} placeholder="Not yet — fill in once done" style={textareaStyle} />
-    </div>
-  );
+/** Built from the insight's own Work Streams at resolve time — replaces the
+ * old ActionFields-derived summary now that the free-text Control/Learn/
+ * Improve prompts are retired (see ActionFields' own comment). */
+function summariseWorkStreams(streams: WorkStream[]): string {
+  const sentences: string[] = [];
+  const improve = streams.filter((w) => w.kind === 'improve');
+  const talk = streams.filter((w) => w.kind === 'toolbox_talk');
+  const learn = streams.filter((w) => w.kind === 'learn');
+  if (improve.length > 0) sentences.push(`${improve.length} corrective action set${improve.length > 1 ? 's' : ''} pushed to site.`);
+  if (talk.length > 0) sentences.push(`${talk.length} toolbox talk${talk.length > 1 ? 's' : ''} delivered.`);
+  if (learn.length > 0) sentences.push(`${learn.length} field enquir${learn.length > 1 ? 'ies' : 'y'} run.`);
+  return sentences.length > 0 ? sentences.join(' ') : 'Marked resolved with no work streams recorded.';
 }
 
 function ResolvedPillar({ label, need, done, first }: { label: string; need?: string; done?: string; first?: boolean }) {
@@ -141,7 +146,12 @@ function AssigneeMenu({ open, onClose, onSelect }: { open: boolean; onClose: () 
 export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Insight; onOpenObservation?: (obsId: string) => void; onStatusChange?: () => void }) {
   const navigate = useNavigate();
   const { user } = useActiveUser();
-  const hasDetail = !!i.suggested;
+  // Gates the FW Map® classification block specifically (only INS-2204 has
+  // it seeded) — kept independent of `suggested`/`cause`, which other
+  // insights now also carry, so seeding a fuller narrative elsewhere doesn't
+  // falsely pull in a classification/endorsements block those insights have
+  // no data for.
+  const hasDetail = !!i.fwClassifications?.length;
   // Prefer observations explicitly linked to this insight; only a handful of
   // insights have that authored yet, so fall back to "same site" as a mock
   // stand-in for the rest rather than showing nothing.
@@ -149,17 +159,19 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
   const srcObs = linkedObs.length > 0 ? linkedObs : fallbackSourceObs(i);
   const [sl, sh] = STATUS[i.status];
   const [kindLabel, kindTone] = INSIGHT_KIND_LABEL[i.kind];
-  const supporters = hasDetail ? i.endorsements! : i.supporterInitials.map((s) => ({ name: s, note: 'Backing this for action.' }));
+  const supporters = i.endorsements ?? i.supporterInitials.map((s) => ({ name: s, note: 'Backing this for action.' }));
 
-  // Persists to the mock store on every keystroke (cheap at this scale) so
-  // progress survives navigating away without a resolve — no separate save
-  // step, no risk of losing a draft if a blur event doesn't fire.
-  const [action, setAction] = useState<ActionFields>(i.action ?? {});
-  const patchAction = (field: keyof ActionFields) => (v: string) => {
-    setAction((a) => ({ ...a, [field]: v }));
-    updateActionFields(i.id, { [field]: v });
-  };
-  const hasOutcome = !!(action.controlDone?.trim() || action.learnDone?.trim() || action.improveDone?.trim());
+  // Resolve now gates on Work Streams (at least one actually pushed to
+  // site), not the retired free-text ActionFields outcome fields.
+  // WorkStreamsSection mutates WORK_STREAMS via its own module-level
+  // functions this component has no other way to observe, so it needs its
+  // own forceRender (passed down as onChanged) to stay in sync — same stale-
+  // read shape as this app's live=BY_ID[id] pattern, just via a callback
+  // instead of a fresh lookup, since Work Streams aren't stored on the
+  // Insight record itself.
+  const [, forceRender] = useState(0);
+  const workStreams = workStreamsFor('insight', i.id);
+  const hasOutcome = workStreams.some((w) => w.status !== 'draft');
 
   const [ackOpen, setAckOpen] = useState(false);
   const [ackComment, setAckComment] = useState('');
@@ -188,7 +200,7 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
     onStatusChange?.();
   };
   const handleResolve = () => {
-    resolveActionedInsight(i.id);
+    resolveActionedInsight(i.id, summariseWorkStreams(workStreams));
     onStatusChange?.();
   };
 
@@ -248,90 +260,124 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
       )}
 
       {i.status === 'closed' && (
-        <>
-          <div style={sectionLabel}>Resolution</div>
+        <Section title="Resolution" subtitle={i.resolutionType === 'actioned' ? "Hiviz's outcome summary, plus what was needed and done for each work stream." : 'Why this was acknowledged with no action taken.'}>
           {i.resolutionType === 'actioned' ? (
             <>
-              <AINote title="Hiviz outcome summary" style={{ marginBottom: 10 }}>{i.resolutionSummary}</AINote>
+              <AINote title="Hiviz outcome summary" style={{ marginBottom: i.action ? 10 : 0 }}>{i.resolutionSummary}</AINote>
               {i.action && (
-                <Card pad={16} style={{ boxShadow: 'none' }}>
+                <div style={{ border: `1px solid ${colors.ruleSoft}`, borderRadius: 'var(--radius-md)', padding: '12px 14px' }}>
                   <ResolvedPillar label="Control" need={i.action.controlNeed} done={i.action.controlDone} first />
                   <ResolvedPillar label="Learn" need={i.action.learnNeed} done={i.action.learnDone} />
                   <ResolvedPillar label="Improve" need={i.action.improveNeed} done={i.action.improveDone} />
-                </Card>
+                </div>
               )}
             </>
           ) : (
-            <Card pad={16} style={{ boxShadow: 'none' }}>
+            <>
               <div style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 8 }}>
                 <Icon name="chat_bubble" size={14} color={colors.inkSoft} />
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 9.5, fontWeight: 700, letterSpacing: 0.9, textTransform: 'uppercase', color: colors.inkSoft }}>Acknowledged, no action taken</span>
               </div>
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14, lineHeight: 1.55, fontWeight: 500 }}>{i.resolutionComment}</div>
-            </Card>
+            </>
           )}
-        </>
+        </Section>
       )}
 
-      <div style={sectionLabel}>Pattern summary</div>
-      <AINote title="AI has suggested" style={{ marginBottom: 10 }}>
-        {i.suggested || i.summary}
-        {i.suggestedBasis && (
-          <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(26,31,0,0.15)', fontStyle: 'italic', fontWeight: 500, color: 'rgba(26,31,0,0.65)' }}>
-            {i.suggestedBasis}
-          </div>
-        )}
-      </AINote>
-      {i.cause && (
-        <AINote title="Likely systemic cause">
-          {i.cause}
-          {i.causeBasis && (
+      <Section title="Pattern summary" subtitle="Hiviz's read on what this pattern is and, where identified, its likely systemic cause.">
+        <AINote title="Hiviz has suggested" style={{ marginBottom: i.cause ? 10 : 0 }}>
+          {i.suggested || i.summary}
+          {i.suggestedBasis && (
             <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(26,31,0,0.15)', fontStyle: 'italic', fontWeight: 500, color: 'rgba(26,31,0,0.65)' }}>
-              {i.causeBasis}
+              {i.suggestedBasis}
             </div>
           )}
         </AINote>
+        {i.cause && (
+          <AINote title="Likely systemic cause">
+            {i.cause}
+            {i.causeBasis && (
+              <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid rgba(26,31,0,0.15)', fontStyle: 'italic', fontWeight: 500, color: 'rgba(26,31,0,0.65)' }}>
+                {i.causeBasis}
+              </div>
+            )}
+          </AINote>
+        )}
+      </Section>
+
+      {/* Review only — this is what actually informs the acknowledge-vs-
+       * progress call. Once in `action`, the same content is available via
+       * "Populate with Hiviz suggestions" inside each Work Stream draft
+       * below, so repeating it here as static read-only text would just
+       * show the manager the same suggestion twice. */}
+      {i.status === 'review' && (i.aiToolboxNarrative || !!i.aiSuggestedInterviewQuestions?.length || !!i.aiSuggestedCorrectiveActions?.length) && (
+        <Section title="Suggested next steps" subtitle="Hiviz-drafted talk, questions, and actions to confirm and close this pattern.">
+          {i.aiToolboxNarrative && (
+            <SuggestionCard icon={WORK_STREAM_KIND_DISPLAY.toolbox_talk.icon} title="Suggested toolbox talk" subtitle="Use to alert workers to the situation">
+              {i.aiToolboxNarrative}
+            </SuggestionCard>
+          )}
+          {!!i.aiSuggestedInterviewQuestions?.length && (
+            <SuggestionCard icon={WORK_STREAM_KIND_DISPLAY.learn.icon} title="Suggested learning questions" subtitle="Use to confirm this pattern in the field">
+              <ol style={{ margin: 0, paddingLeft: 18 }}>
+                {i.aiSuggestedInterviewQuestions.map((q, k) => <li key={k} style={{ marginBottom: 8 }}>{q}</li>)}
+              </ol>
+            </SuggestionCard>
+          )}
+          {!!i.aiSuggestedCorrectiveActions?.length && (
+            <SuggestionCard icon={WORK_STREAM_KIND_DISPLAY.improve.icon} title="Suggested corrective actions" subtitle="Use to close the gap driving this pattern">
+              <ol style={{ margin: 0, paddingLeft: 18 }}>
+                {i.aiSuggestedCorrectiveActions.map((a) => <li key={a.step} style={{ marginBottom: 8 }}>{a.action}</li>)}
+              </ol>
+              {i.aiSuggestedCorrectiveActionsRationale && (
+                <div style={{ paddingTop: 10, marginTop: 2, borderTop: `1px solid ${colors.ruleSoft}`, fontStyle: 'italic', color: colors.inkSoft }}>
+                  {i.aiSuggestedCorrectiveActionsRationale}
+                </div>
+              )}
+            </SuggestionCard>
+          )}
+        </Section>
       )}
 
+      <WorkStreamsSection
+        sourceType="insight" sourceId={i.id} siteNames={i.siteNames} canAdd={i.status === 'action'}
+        aiSuggestedQuestions={i.aiSuggestedInterviewQuestions?.map((q) => ({ text: q }))}
+        aiSuggestedActions={i.aiSuggestedCorrectiveActions?.map((a) => ({ text: a.action }))}
+        aiSuggestedNarrative={i.aiToolboxNarrative}
+        onChanged={() => forceRender((v) => v + 1)}
+      />
       {i.status === 'action' && (
-        <>
-          <div style={{ ...sectionLabel, display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-            <span>Action</span>
-            <span style={{ textTransform: 'none', fontWeight: 500, letterSpacing: 0, color: colors.inkMuted }}>Autosaves as you go</span>
-          </div>
-          <Card pad={16} style={{ boxShadow: 'none', marginBottom: 10 }}>
-            <ActionRow
-              label="Control" needLabel="What do we need to control?" doneLabel="What was controlled?"
-              need={action.controlNeed ?? ''} done={action.controlDone ?? ''}
-              onNeedChange={patchAction('controlNeed')} onDoneChange={patchAction('controlDone')} first
-            />
-            <ActionRow
-              label="Learn" needLabel="What do we need to learn?" doneLabel="What did we learn?"
-              need={action.learnNeed ?? ''} done={action.learnDone ?? ''}
-              onNeedChange={patchAction('learnNeed')} onDoneChange={patchAction('learnDone')}
-            />
-            <ActionRow
-              label="Improve" needLabel="What do we need to improve?" doneLabel="What did we improve?"
-              need={action.improveNeed ?? ''} done={action.improveDone ?? ''}
-              onNeedChange={patchAction('improveNeed')} onDoneChange={patchAction('improveDone')}
-            />
-            <div style={{ marginTop: 14, paddingTop: 14, borderTop: `1px solid ${colors.ruleSoft}`, fontFamily: 'var(--font-sans)', fontSize: 11.5, color: colors.inkMuted, textAlign: 'center' }}>
-              {hasOutcome ? 'Ready to resolve — use Mark resolved above.' : 'Fill in at least one outcome, then use Mark resolved above.'}
-            </div>
-          </Card>
-        </>
+        <div style={{ fontFamily: 'var(--font-sans)', fontSize: 11.5, color: colors.inkMuted, textAlign: 'center', marginTop: -6, marginBottom: 16 }}>
+          {hasOutcome ? 'Ready to resolve — use Mark resolved above.' : 'Push at least one work stream live, then use Mark resolved above.'}
+        </div>
       )}
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Energy classification</div>
+      <div style={sectionLabel}>Energy classification</div>
       <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
         {i.energyTypes.map((e, k) => <Badge key={k} tone={e === 'none' ? 'warning' : 'error'} outline>{energyLabel(e)}</Badge>)}
       </div>
 
-      {hasDetail && (
+      {/* Rolled up from the source observations' own safetyPracticeIds at
+       * seeding time, same "hand-authored, not derived" convention as
+       * energyTypes above — see AiClassification's own doc comment,
+       * types/observation.ts, and [[project_investigation_timeline]]'s
+       * upstream-enrichment discussion (2026-09-15). */}
+      {!!i.safetyPracticeIds?.length && (
         <>
-          <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Forge Works Map® classification</div>
+          <div style={sectionLabel}>Safety practices</div>
+          <div style={{ display: 'flex', gap: 7, flexWrap: 'wrap' }}>
+            {i.safetyPracticeIds.map((id) => {
+              const p = SAFETY_PRACTICES.find((s) => s.id === id);
+              return p ? <Badge key={id} tone="primary" outline icon={p.icon}>{p.name}</Badge> : null;
+            })}
+          </div>
+        </>
+      )}
+
+      {hasDetail && (
+        <Section title="Forge Works Map® classification" subtitle="Factors classified against the Forge Works Map®, each with a confidence score and rationale.">
           {i.fwClassifications!.map((f, k) => (
-            <div key={k} style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', marginBottom: 8 }}>
+            <div key={k} style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', marginBottom: k === i.fwClassifications!.length - 1 ? 0 : 8 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6, flexWrap: 'wrap' }}>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700 }}>{f.factor}</span>
                 <span style={{ fontFamily: 'var(--font-mono)', fontSize: 10.5, fontWeight: 700, color: colors.inkMuted, textTransform: 'uppercase' }}>{f.domain}</span>
@@ -342,41 +388,42 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
               <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, fontStyle: 'italic', color: colors.inkSoft, lineHeight: 1.45 }}>{f.rationale}</div>
             </div>
           ))}
-        </>
+        </Section>
       )}
 
-      <div style={sectionLabel}>Support for action</div>
-      {supporters.length === 0 ? (
-        <Card pad={28} style={{ textAlign: 'center' }}>
-          <Icon name="handshake" size={26} color={colors.inkMuted} />
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14.5, fontWeight: 700, marginTop: 10 }}>No one's backed this yet</div>
-          <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, lineHeight: 1.5, maxWidth: 380, margin: '6px auto 0' }}>
-            Backing an insight as a manager signals it's a real, recurring pattern worth prioritising — not a one-off. It's what turns a suggestion into something ops leadership acts on.
-          </div>
-          {i.status !== 'closed' && !supportOpen && (
-            <div style={{ marginTop: 16 }}>
-              <Btn variant="primary" size="sm" icon="check" onClick={() => setSupportOpen(true)}>Support for action</Btn>
+      <Section title="Support for action" subtitle="Managers backing this pattern as real and recurring — what turns a suggestion into something ops leadership acts on.">
+        {supporters.length === 0 ? (
+          <div style={{ textAlign: 'center' }}>
+            <Icon name="handshake" size={26} color={colors.inkMuted} />
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 14.5, fontWeight: 700, marginTop: 10 }}>No one's backed this yet</div>
+            <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13, color: colors.inkSoft, lineHeight: 1.5, maxWidth: 380, margin: '6px auto 0' }}>
+              Backing an insight as a manager signals it's a real, recurring pattern worth prioritising — not a one-off. It's what turns a suggestion into something ops leadership acts on.
             </div>
-          )}
-        </Card>
-      ) : (
-        <div style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '4px 14px' }}>
-          {supporters.map((e, k) => (
-            <ListRow key={k} last={k === supporters.length - 1 && !(i.status !== 'closed' && !supportOpen)} padding="12px 0">
-              <Avatar name={e.name} size={32} />
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 700 }}>{e.name}</div>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, marginTop: 2, lineHeight: 1.45, fontWeight: 500 }}>{e.note}</div>
+            {i.status !== 'closed' && !supportOpen && (
+              <div style={{ marginTop: 16 }}>
+                <Btn variant="primary" size="sm" icon="check" onClick={() => setSupportOpen(true)}>Support for action</Btn>
               </div>
-            </ListRow>
-          ))}
-          {i.status !== 'closed' && !supportOpen && (
-            <ListRow last padding="12px 0">
-              <LinkBtn icon="add" onClick={() => setSupportOpen(true)}>Add your support</LinkBtn>
-            </ListRow>
-          )}
-        </div>
-      )}
+            )}
+          </div>
+        ) : (
+          <div>
+            {supporters.map((e, k) => (
+              <ListRow key={k} last={k === supporters.length - 1 && !(i.status !== 'closed' && !supportOpen)} padding="12px 0">
+                <Avatar name={e.name} size={32} />
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 700 }}>{e.name}</div>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, marginTop: 2, lineHeight: 1.45, fontWeight: 500 }}>{e.note}</div>
+                </div>
+              </ListRow>
+            ))}
+            {i.status !== 'closed' && !supportOpen && (
+              <ListRow last padding="12px 0">
+                <LinkBtn icon="add" onClick={() => setSupportOpen(true)}>Add your support</LinkBtn>
+              </ListRow>
+            )}
+          </div>
+        )}
+      </Section>
       {i.status !== 'closed' && supportOpen && (
         <Card pad={16} style={{ marginTop: 10 }}>
           <label style={fieldLabel}>Why are you backing this for action? (optional)</label>
@@ -392,34 +439,37 @@ export function InsightDetail({ i, onOpenObservation, onStatusChange }: { i: Ins
         </Card>
       )}
 
-      <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px', display: 'flex', justifyContent: 'space-between' }}>
-        <span>Source observations</span><span style={{ color: colors.inkMuted }}>{srcObs.length}</span>
-      </div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {srcObs.map((o) => {
-          const s = SIGNAL_DISPLAY[o.signal_type];
-          return (
-            <div
-              key={o.id}
-              className="a-card-int"
-              onClick={() => (onOpenObservation ? onOpenObservation(o.id) : navigate(`/observations?id=${o.id}`))}
-              style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10 }}
-            >
-              <div style={{ width: 34, height: 34, borderRadius: 'var(--radius-md)', background: colors.fill, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                <Icon name="visibility" size={17} color={colors.inkSoft} />
-              </div>
-              <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>“{o.summary}”</div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                  <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{o.siteName} · {o.when}</span>
-                  <Badge tone={s.tone}>{s.label}</Badge>
+      <Section
+        title="Source observations"
+        subtitle={linkedObs.length > 0 ? 'The observations directly linked to this pattern.' : 'No observations directly linked yet — the closest match from the same sites.'}
+        action={<span style={{ fontFamily: 'var(--font-mono)', fontSize: 12.5, fontWeight: 700, color: colors.inkMuted }}>{srcObs.length}</span>}
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          {srcObs.map((o) => {
+            const s = SIGNAL_DISPLAY[o.signal_type];
+            return (
+              <div
+                key={o.id}
+                className="a-card-int"
+                onClick={() => (onOpenObservation ? onOpenObservation(o.id) : navigate(`/observations?id=${o.id}`))}
+                style={{ border: `1px solid ${colors.rule}`, borderRadius: 'var(--radius-lg)', padding: '12px 14px', cursor: 'pointer', display: 'flex', alignItems: 'flex-start', gap: 10 }}
+              >
+                <div style={{ width: 34, height: 34, borderRadius: 'var(--radius-md)', background: colors.fill, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                  <Icon name="visibility" size={17} color={colors.inkSoft} />
                 </div>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ fontFamily: 'var(--font-sans)', fontSize: 13.5, fontWeight: 600, lineHeight: 1.4 }}>“{o.summary}”</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
+                    <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkSoft, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.4 }}>{o.siteName} · {o.when}</span>
+                    <Badge tone={s.tone}>{s.label}</Badge>
+                  </div>
+                </div>
+                <Icon name="chevron_right" size={18} color={colors.inkMuted} style={{ marginTop: 2, flexShrink: 0 }} />
               </div>
-              <Icon name="chevron_right" size={18} color={colors.inkMuted} style={{ marginTop: 2, flexShrink: 0 }} />
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      </Section>
     </Card>
   );
 }

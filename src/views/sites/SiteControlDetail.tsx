@@ -1,12 +1,13 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Card, Eyebrow, Badge, Btn, LinkBtn } from '@/components';
+import { PageHead, Card, Badge, Btn, LinkBtn } from '@/components';
 import { SiteHeader } from './SiteHeader';
 import { SITES } from '@/data/sites';
 import { CRITICAL_CONTROLS_BY_ID, HAZARDS_BY_ID, WORKSITE_CONTROLS, acceptControl, modifyControl, markNotRequired, activateControl, statusLabel } from '@/data/risk';
 import { FREQUENCY_LABEL, WORKSITE_CONTROL_STATUS_DISPLAY } from '@/views/risk/riskDisplay';
 import { ControlEffectivenessCard } from '@/views/risk/ControlEffectiveness';
+import { Section } from '@/views/shared/SectionHeading';
 
 const inputStyle = { padding: '7px 9px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 12.5, outline: 'none', flex: 1 };
 
@@ -65,32 +66,30 @@ export function SiteControlDetail() {
       )}
 
       {wc?.status === 'pending_review' && (
-        <Card pad={20} style={{ marginBottom: 16 }}>
-          <Eyebrow>Awaiting your response</Eyebrow>
+        <Section title="Awaiting your response" subtitle="This control was just pushed here — accept it, tighten it, or mark it not required.">
           {!openRow ? (
-            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
               <Btn variant="primary" size="sm" icon="check" onClick={handleAccept}>Accept</Btn>
               <Btn variant="ghost" size="sm" onClick={() => { setOpenRow('modify'); setText(''); }}>Modify (stricter)</Btn>
               <Btn variant="ghost" size="sm" onClick={() => { setOpenRow('reject'); setText(''); }}>Not required</Btn>
             </div>
           ) : (
-            <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+            <div style={{ display: 'flex', gap: 8 }}>
               <input style={inputStyle} autoFocus placeholder={openRow === 'modify' ? 'Stricter local standard…' : 'Reason not required…'} value={text} onChange={(e) => setText(e.target.value)} />
               <Btn variant="ghost" size="sm" onClick={() => setOpenRow(null)}>Cancel</Btn>
               <Btn variant="primary" size="sm" icon="check" disabled={!text.trim()} onClick={handleSubmit}>{openRow === 'modify' ? 'Save' : 'Confirm'}</Btn>
             </div>
           )}
-        </Card>
+        </Section>
       )}
 
       {wc?.status === 'implementing' && (
-        <Card pad={20} style={{ marginBottom: 16 }}>
-          <Eyebrow>Assign a verifier to go active</Eyebrow>
-          <div style={{ display: 'flex', gap: 8, marginTop: 6 }}>
+        <Section title="Assign a verifier to go active" subtitle="Name who will verify this control before it goes live.">
+          <div style={{ display: 'flex', gap: 8 }}>
             <input style={inputStyle} placeholder="Verifier name…" value={verifierName} onChange={(e) => setVerifierName(e.target.value)} />
             <Btn variant="primary" size="sm" icon="check" disabled={!verifierName.trim()} onClick={handleActivate}>Activate</Btn>
           </div>
-        </Card>
+        </Section>
       )}
 
       <ControlEffectivenessCard criticalControlId={control.id} siteId={s.id} />

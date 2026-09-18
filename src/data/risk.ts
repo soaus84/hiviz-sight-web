@@ -105,6 +105,25 @@ export const CRITICAL_CONTROLS: CriticalControl[] = [
 
 export const CRITICAL_CONTROLS_BY_ID: Record<string, CriticalControl> = Object.fromEntries(CRITICAL_CONTROLS.map((c) => [c.id, c]));
 
+/** Controls scoped to a set of work types — a `CriticalControl` belongs to
+ * a `Hazard`, and a `Hazard` belongs to a work type, so this is a real,
+ * meaningful filter, not a guess. Used to default an Investigation's
+ * control pickers (TimelineEventDrawer's context form, InvestigationFindings'
+ * add-finding form — see [[project_investigation_timeline]]) to the work
+ * type(s) of the incident(s) that led to it, rather than showing every
+ * control in the whole register. Deliberately a default, not a hard
+ * constraint — a control from a different work type genuinely can be
+ * relevant (a systemic finding, an adjacent trade, shared equipment), so
+ * callers should always offer a way to fall back to the full list. Returns
+ * every control (rather than none) when `workTypeIds` is empty, so an
+ * incident with no work type recorded doesn't leave the picker looking
+ * broken. */
+export function controlsForWorkTypes(workTypeIds: string[]): CriticalControl[] {
+  if (workTypeIds.length === 0) return CRITICAL_CONTROLS;
+  const hazardIds = new Set(HAZARDS.filter((h) => workTypeIds.includes(h.workTypeId)).map((h) => h.id));
+  return CRITICAL_CONTROLS.filter((c) => hazardIds.has(c.hazardId));
+}
+
 let nextCriticalControlSeq = 20;
 
 export function addControl(input: Omit<CriticalControl, 'id'>): CriticalControl {
@@ -187,6 +206,23 @@ let nextWorksiteControlSeq = 20;
 /** Push/accept model, specs/features/RISK-CONTROLS.md §4.1 — creates a
  * pending_review WorksiteControl at every site whose workTypeIds include the
  * control's hazard's workTypeId, skipping sites that already have one. */
+/** Pushes to one specific site — the per-row action on ControlDetail.tsx's
+ * rollout table. Returns null (no-op) if the site already has an instance,
+ * so a stale row re-clicked twice can't create a duplicate. */
+export function pushControlToSite(criticalControlId: string, siteId: string): WorksiteControl | null {
+  const control = CRITICAL_CONTROLS_BY_ID[criticalControlId];
+  if (!control) return null;
+  const alreadyPushed = WORKSITE_CONTROLS.some((c) => c.criticalControlId === criticalControlId && c.siteId === siteId);
+  if (alreadyPushed) return null;
+  const wc: WorksiteControl = { id: `wc${nextWorksiteControlSeq++}`, criticalControlId, siteId, status: 'pending_review' };
+  WORKSITE_CONTROLS.push(wc);
+  WORKSITE_CONTROLS_BY_ID[wc.id] = wc;
+  return wc;
+}
+
+/** Every remaining untargeted site at once — the bulk action in
+ * ControlDetail.tsx's header, for "push to everyone" rather than one at a
+ * time. Built on pushControlToSite so both share one id-allocation path. */
 export function pushControlToSites(criticalControlId: string): WorksiteControl[] {
   const control = CRITICAL_CONTROLS_BY_ID[criticalControlId];
   if (!control) return [];
@@ -194,12 +230,7 @@ export function pushControlToSites(criticalControlId: string): WorksiteControl[]
   if (!hazard) return [];
   const alreadyPushed = new Set(WORKSITE_CONTROLS.filter((c) => c.criticalControlId === criticalControlId).map((c) => c.siteId));
   const targets = SITES.filter((s) => s.workTypeIds.includes(hazard.workTypeId) && !alreadyPushed.has(s.id));
-  return targets.map((s) => {
-    const wc: WorksiteControl = { id: `wc${nextWorksiteControlSeq++}`, criticalControlId, siteId: s.id, status: 'pending_review' };
-    WORKSITE_CONTROLS.push(wc);
-    WORKSITE_CONTROLS_BY_ID[wc.id] = wc;
-    return wc;
-  });
+  return targets.map((s) => pushControlToSite(criticalControlId, s.id)).filter((wc): wc is WorksiteControl => wc !== null);
 }
 
 /** pending_review -> implementing. */

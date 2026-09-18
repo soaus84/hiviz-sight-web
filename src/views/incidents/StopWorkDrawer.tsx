@@ -8,11 +8,11 @@ import { confirmStopped, resume, formatWhen } from '@/data/stopWork';
 import { INCIDENTS_BY_ID } from '@/data/incidents';
 import { BARRIER_FAILURES_BY_ID, barrierFailurePath } from '@/data/barrierFailures';
 import { STOP_WORK_STATUS_DISPLAY, SEVERITY_DISPLAY } from './incidentDisplay';
+import { Section } from '@/views/shared/SectionHeading';
 import type { StopWorkEvent } from '@/types';
 
 const fieldLabel = { display: 'block', fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 600, marginBottom: 5 };
 const inputStyle = { width: '100%', padding: '9px 12px', borderRadius: 'var(--radius-md)', border: `1px solid ${colors.rule}`, fontFamily: 'var(--font-sans)', fontSize: 13.5, outline: 'none', resize: 'vertical' as const };
-const sectionLabel = { fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase' as const, color: colors.inkSoft, margin: '22px 0 10px' };
 
 interface TimelineEntry { label: string; by: string; at?: string; note?: string }
 
@@ -109,24 +109,20 @@ export function StopWorkDrawer({ e, onClose, onChanged, onOpenSource }: { e: Sto
         )}
 
         {buildTimeline(e).length > 0 && (
-          <>
-            <div style={{ fontFamily: 'var(--font-mono)', fontSize: 11, fontWeight: 700, letterSpacing: 1, textTransform: 'uppercase', color: colors.inkSoft, margin: '22px 0 10px' }}>Story</div>
-            <Card pad={4} style={{ boxShadow: 'none' }}>
-              {buildTimeline(e).map((t, i) => (
-                <div key={i} style={{ padding: '10px 12px', borderTop: i === 0 ? undefined : `1px solid ${colors.ruleSoft}` }}>
-                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-                    <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700 }}>{t.label} · {t.by}</span>
-                    {t.at && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, whiteSpace: 'nowrap' }}>{formatWhen(t.at)}</span>}
-                  </div>
-                  {t.note && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, lineHeight: 1.5, marginTop: 4 }}>{t.note}</div>}
+          <Section title="Story" subtitle="This stop work event's history, in order." pad={4}>
+            {buildTimeline(e).map((t, i) => (
+              <div key={i} style={{ padding: '10px 12px', borderTop: i === 0 ? undefined : `1px solid ${colors.ruleSoft}` }}>
+                <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+                  <span style={{ fontFamily: 'var(--font-sans)', fontSize: 13, fontWeight: 700 }}>{t.label} · {t.by}</span>
+                  {t.at && <span style={{ fontFamily: 'var(--font-mono)', fontSize: 11, color: colors.inkMuted, whiteSpace: 'nowrap' }}>{formatWhen(t.at)}</span>}
                 </div>
-              ))}
-            </Card>
-          </>
+                {t.note && <div style={{ fontFamily: 'var(--font-sans)', fontSize: 12.5, color: colors.inkSoft, lineHeight: 1.5, marginTop: 4 }}>{t.note}</div>}
+              </div>
+            ))}
+          </Section>
         )}
 
-        <div style={sectionLabel}>Source</div>
-        <Card pad={4} style={{ boxShadow: 'none' }}>
+        <Section title="Source" subtitle="The incident or barrier failure this stop work was raised from." pad={4}>
           <AttnRow
             label={source.label}
             icon={source.icon}
@@ -136,7 +132,7 @@ export function StopWorkDrawer({ e, onClose, onChanged, onOpenSource }: { e: Sto
             last
             onClick={() => (onOpenSource ? onOpenSource(e.sourceKind, e.sourceId) : navigate(sourcePath))}
           />
-        </Card>
+        </Section>
       </div>
     </Drawer>
   );

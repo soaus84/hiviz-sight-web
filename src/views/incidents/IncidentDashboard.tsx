@@ -1,12 +1,13 @@
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { PageHead, Stat, Card, Eyebrow, Badge, LinkBtn, Drawer } from '@/components';
+import { PageHead, Stat, Badge, LinkBtn, Drawer } from '@/components';
 import { SITES } from '@/data/sites';
 import { INCIDENTS, incidentInRegion } from '@/data/incidents';
 import { INVESTIGATIONS, investigationInRegion } from '@/data/investigations';
 import { inPurview, purviewLabel, purviewPhrase } from '@/data/purview';
 import { usePurviewScope } from '@/state/PurviewScope';
 import { AttnRow } from '@/views/shared/AttnRow';
+import { Section } from '@/views/shared/SectionHeading';
 import { IncidentDetail } from './IncidentDetail';
 import { INCIDENT_TYPE_LABEL } from './incidentDisplay';
 
@@ -25,7 +26,7 @@ export function IncidentDashboard() {
 
   const severe = incidents.filter((i) => i.status === 'severe');
   const openIncidents = incidents.filter((i) => i.status === 'reported' || i.status === 'severe');
-  const openInvestigations = investigations.filter((v) => v.status === 'open');
+  const activeInvestigations = investigations.filter((v) => v.status !== 'closed');
   const incidentsLast7d = incidents.filter((i) => MOCK_NOW.getTime() - new Date(i.occurredAt).getTime() <= 7 * 24 * 60 * 60 * 1000);
   const recent = [...incidents].sort((a, b) => new Date(b.occurredAt).getTime() - new Date(a.occurredAt).getTime()).slice(0, 5);
 
@@ -52,26 +53,29 @@ export function IncidentDashboard() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         <Stat label="Open incidents" value={openIncidents.length} sub={`${severe.length} severe · pending review`} icon="report" />
         <Stat label="Severe pending review" value={severe.length} icon="warning" />
-        <Stat label="Open investigations" value={openInvestigations.length} sub={`${investigations.filter((v) => v.status === 'closed').length} closed`} icon="search" />
+        <Stat label="Active investigations" value={activeInvestigations.length} sub={`${investigations.filter((v) => v.status === 'closed').length} closed`} icon="search" />
         <Stat label="Incidents · 7d" value={incidentsLast7d.length} icon="calendar_today" />
       </div>
 
-      <Card pad={20} style={{ marginBottom: 16 }}>
-        <Eyebrow right={<LinkBtn onClick={() => navigate('/incidents?status=severe')}>View all</LinkBtn>}>
-          Needs your review
-        </Eyebrow>
+      <Section
+        title="Needs your review"
+        subtitle="Severe incidents waiting on acknowledgement or investigation."
+        action={<LinkBtn onClick={() => navigate('/incidents?status=severe')}>View all</LinkBtn>}
+      >
         {severe.map((i) => (
           <AttnRow key={i.id} label={INCIDENT_TYPE_LABEL[i.incidentType]} tone="warning" title={i.description} meta={`${i.siteName} · ${i.when}`} onClick={() => openIncidentDrawer(i.id)} last={i.id === severe[severe.length - 1]?.id} />
         ))}
         {severe.length === 0 && (
           <div style={{ padding: '20px 4px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>Nothing needs review in {purviewPhrase(region, division)} right now.</div>
         )}
-      </Card>
+      </Section>
 
-      <Eyebrow right={<LinkBtn onClick={() => navigate('/incidents')}>All incidents</LinkBtn>}>
-        Latest incidents
-      </Eyebrow>
-      <Card pad={0}>
+      <Section
+        title="Latest incidents"
+        subtitle="The five most recently reported incidents in your purview."
+        action={<LinkBtn onClick={() => navigate('/incidents')}>All incidents</LinkBtn>}
+        pad={0}
+      >
         {recent.map((i, k) => (
           <div key={i.id} onClick={() => openIncidentDrawer(i.id)} className="a-card-int" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 18px', borderBottom: k === recent.length - 1 ? undefined : `1px solid ${colors.ruleSoft}`, cursor: 'pointer' }}>
             <div style={{ flex: 1, minWidth: 0 }}>
@@ -84,7 +88,7 @@ export function IncidentDashboard() {
         {recent.length === 0 && (
           <div style={{ padding: '20px 18px', textAlign: 'center', color: colors.inkMuted, fontSize: 13.5, fontWeight: 500 }}>No incidents captured in {purviewPhrase(region, division)} yet.</div>
         )}
-      </Card>
+      </Section>
 
       <Drawer open={!!sel} onClose={closeIncidentDrawer}>
         {sel && <IncidentDetail i={sel} onClose={closeIncidentDrawer} />}

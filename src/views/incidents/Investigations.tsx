@@ -22,13 +22,16 @@ import { DrawerPanel } from '@/views/shared/DrawerPanel';
 import { insightsFitToHeight, type InsightsView } from '@/views/insights/insightsLayout';
 import type { Incident, Investigation } from '@/types';
 
-// Three pipeline stages — the first ('review') is severe Incidents awaiting
-// the Acknowledge/Progress decision, the other two are real Investigation
-// records. Not InvestigationStatus: that type only covers open/closed, since
-// the review/triage gate happens one step earlier, on the Incident. See the
-// top-of-file note in data/investigations.ts.
-type PipelineTab = 'review' | 'open' | 'closed';
-const VALID_TABS: PipelineTab[] = ['review', 'open', 'closed'];
+// Four pipeline stages — the first ('review') is severe Incidents awaiting
+// the Acknowledge/Progress decision, the other three are InvestigationStatus
+// values verbatim (timeline/actions/closed — see [[project_investigation_timeline]]
+// for the 2026-09-14 redesign this reflects). Kept as its own type rather
+// than just using InvestigationStatus directly because of that extra
+// 'review' stage — the review/triage gate happens one step earlier, on the
+// Incident, not as an Investigation status. See the top-of-file note in
+// data/investigations.ts.
+type PipelineTab = 'review' | 'timeline' | 'actions' | 'closed';
+const VALID_TABS: PipelineTab[] = ['review', 'timeline', 'actions', 'closed'];
 function isPipelineTab(v: string | null): v is PipelineTab {
   return !!v && (VALID_TABS as string[]).includes(v);
 }
@@ -37,9 +40,9 @@ export interface InvestigationsProps {
   /** Pre-filtered row overrides — used by MyInvestigations.tsx to reuse
    * this exact page (tabs, board/list toggle, detail panels, every action)
    * scoped to one person instead of the whole purview. Everything below
-   * this line is unchanged either way. All three or none — a partial
+   * this line is unchanged either way. All four or none — a partial
    * override would leave the tab counts telling two different stories. */
-  rows?: { severeIncidents: Incident[]; openInvestigations: Investigation[]; closedInvestigations: Investigation[] };
+  rows?: { severeIncidents: Incident[]; timelineInvestigations: Investigation[]; actionsInvestigations: Investigation[]; closedInvestigations: Investigation[] };
   title?: string;
   sub?: string;
 }
@@ -76,11 +79,12 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
 
   // Not memoized — both stores mutate in place, same reasoning as Insights.tsx.
   const severeIncidents = rows?.severeIncidents ?? INCIDENTS.filter((i) => i.status === 'severe' && incidentInRegion(i, { region, division }));
-  const openInvestigations = rows?.openInvestigations ?? INVESTIGATIONS.filter((v) => v.status === 'open' && investigationInRegion(v, { region, division }));
+  const timelineInvestigations = rows?.timelineInvestigations ?? INVESTIGATIONS.filter((v) => v.status === 'timeline' && investigationInRegion(v, { region, division }));
+  const actionsInvestigations = rows?.actionsInvestigations ?? INVESTIGATIONS.filter((v) => v.status === 'actions' && investigationInRegion(v, { region, division }));
   const closedInvestigations = rows?.closedInvestigations ?? INVESTIGATIONS.filter((v) => v.status === 'closed' && investigationInRegion(v, { region, division }));
 
-  const counts = { review: severeIncidents.length, open: openInvestigations.length, closed: closedInvestigations.length };
-  const list: { id: string }[] = tab === 'review' ? severeIncidents : tab === 'open' ? openInvestigations : closedInvestigations;
+  const counts = { review: severeIncidents.length, timeline: timelineInvestigations.length, actions: actionsInvestigations.length, closed: closedInvestigations.length };
+  const list: { id: string }[] = tab === 'review' ? severeIncidents : tab === 'timeline' ? timelineInvestigations : tab === 'actions' ? actionsInvestigations : closedInvestigations;
 
   useEffect(() => {
     if (list.find((item) => item.id === selId)) return;
@@ -104,16 +108,17 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
 
   // Fired after a severe incident is acknowledged or progressed. Progressing
   // creates a real Investigation and links the incident to it — follow the
-  // selection there and land on the 'open' tab, mirroring how Insight's
+  // selection there and land on the 'timeline' tab, mirroring how Insight's
   // "Progress to action" carries the selection forward. Acknowledging exits
-  // the pipeline entirely (it's not review/open/closed) — clear selection.
+  // the pipeline entirely (it's not review/timeline/actions/closed) — clear
+  // selection.
   const handleIncidentChanged = () => {
     if (!selId) return;
     const updated = INCIDENTS_BY_ID[selId];
     if (!updated || updated.status === 'severe') return;
     if (updated.status === 'linked' && updated.linkedInvestigationId) {
-      setTabState('open');
-      setParams({ tab: 'open' }, { replace: true });
+      setTabState('timeline');
+      setParams({ tab: 'timeline' }, { replace: true });
       selectItem(updated.linkedInvestigationId);
       return;
     }
@@ -133,7 +138,11 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
     const updated = INVESTIGATIONS_BY_ID[selId];
     if (!updated) return;
     setTabState(updated.status);
-    setParams(updated.status === 'closed' ? { tab: 'closed' } : {}, { replace: true });
+    // Investigation.status is never 'review', so always setting the tab
+    // param explicitly (rather than the old "clear it unless closed") is
+    // what actually distinguishes 'timeline' from 'actions' now that
+    // there's more than one non-closed status to land on.
+    setParams({ tab: updated.status }, { replace: true });
   };
 
   const selIncId = params.get('inc');
@@ -184,14 +193,14 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
           />
           {view === 'list' && (
             <div style={{ marginBottom: 20 }}>
-              <Tabs value={tab} onChange={setTab} items={[{ k: 'review', label: 'Needs review', n: counts.review }, { k: 'open', label: 'Investigating', n: counts.open }, { k: 'closed', label: 'Closed', n: counts.closed }]} />
+              <Tabs value={tab} onChange={setTab} items={[{ k: 'review', label: 'Needs review', n: counts.review }, { k: 'timeline', label: 'Timeline', n: counts.timeline }, { k: 'actions', label: 'Actions', n: counts.actions }, { k: 'closed', label: 'Closed', n: counts.closed }]} />
             </div>
           )}
         </>
       )}
 
       {view === 'board' ? (
-        <InvestigationsBoard severeIncidents={severeIncidents} investigations={[...openInvestigations, ...closedInvestigations]} onOpenIncident={selectItem} onOpenInvestigation={selectItem} />
+        <InvestigationsBoard severeIncidents={severeIncidents} investigations={[...timelineInvestigations, ...actionsInvestigations, ...closedInvestigations]} onOpenIncident={selectItem} onOpenInvestigation={selectItem} />
       ) : (
         <div
           style={{
@@ -219,7 +228,7 @@ export function Investigations({ rows, title, sub }: InvestigationsProps = {}) {
               )}
               {tab === 'review'
                 ? severeIncidents.map((i) => <SevereIncidentCard key={i.id} i={i} selected={i.id === selId} onClick={() => selectItem(i.id)} />)
-                : (tab === 'open' ? openInvestigations : closedInvestigations).map((v) => <InvestigationCard key={v.id} v={v} selected={v.id === selId} onClick={() => selectItem(v.id)} />)}
+                : (tab === 'timeline' ? timelineInvestigations : tab === 'actions' ? actionsInvestigations : closedInvestigations).map((v) => <InvestigationCard key={v.id} v={v} selected={v.id === selId} onClick={() => selectItem(v.id)} />)}
             </div>
           )}
 

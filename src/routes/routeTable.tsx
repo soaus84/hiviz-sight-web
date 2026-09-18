@@ -14,6 +14,7 @@ import { SiteInsights } from '@/views/sites/SiteInsights';
 import { SiteIncidents } from '@/views/sites/SiteIncidents';
 import { SiteControls } from '@/views/sites/SiteControls';
 import { SiteControlDetail } from '@/views/sites/SiteControlDetail';
+import { SiteWorkStreams } from '@/views/sites/SiteWorkStreams';
 import { Observations } from '@/views/observations/Observations';
 import { Insights } from '@/views/insights/Insights';
 import { Incidents } from '@/views/incidents/Incidents';
@@ -66,6 +67,7 @@ export const routes = [
       { path: 'sites/:id/incidents', element: <SiteIncidents /> },
       { path: 'sites/:id/controls', element: <SiteControls /> },
       { path: 'sites/:id/controls/:controlId', element: <SiteControlDetail /> },
+      { path: 'sites/:id/work-streams', element: <SiteWorkStreams /> },
       { path: 'observations', element: <Observations /> },
       { path: 'insights', element: <Insights /> },
       { path: 'insights/:id', element: <Insights /> },

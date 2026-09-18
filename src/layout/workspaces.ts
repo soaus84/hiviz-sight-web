@@ -16,7 +16,7 @@ export interface NavItem {
   external?: boolean;
 }
 
-export type WorkspaceId = 'me' | 'insights' | 'incident' | 'risk' | 'communities' | 'admin';
+export type WorkspaceId = 'me' | 'insights' | 'incident' | 'communities' | 'admin';
 
 export interface Workspace {
   id: WorkspaceId;
@@ -83,33 +83,34 @@ export const WORKSPACES: Workspace[] = [
       { path: '/sites', label: 'Sites', icon: 'location_on' },
     ],
   },
+  // Merged with the former standalone Risk workspace 2026-09-09 — kept as
+  // one WorkspaceId/nav rather than two, since both were always "the same
+  // people managing the same sites' safety picture," just two different
+  // lenses on it. Stop Work and both Barrier Failures views were briefly
+  // hidden from this nav (routes/components/Focus's own decision queue for
+  // them were left untouched throughout) per an explicit "hide for now,
+  // could resurface" prototype request — resurfaced 2026-09-15 once that
+  // "for now" was up: easier day-to-day review of upcoming decisions,
+  // rather than only reaching them via a linked-entity card from an
+  // Incident/Investigation.
   {
     id: 'incident',
-    label: 'Incident',
+    label: 'Incident & Risk',
     icon: 'report',
-    description: 'Incidents, investigations & sites',
+    description: 'Incidents, investigations, work types & sites',
     home: '/incidents/dashboard',
     nav: [
       { path: '/incidents/dashboard', label: 'Dashboard', icon: 'grid_view' },
       { path: '/investigations', label: 'Investigations', icon: 'search' },
-      { path: '/incidents/stop-work', label: 'Stop Work', icon: 'front_hand' },
       { path: '/incidents', label: 'Incidents', icon: 'report' },
-      { path: '/incidents/sites', label: 'Sites', icon: 'location_on' },
-    ],
-  },
-  {
-    id: 'risk',
-    label: 'Risk',
-    icon: 'shield',
-    description: 'Work types, barrier failures & sites',
-    home: '/risk/dashboard',
-    nav: [
-      { path: '/risk/dashboard', label: 'Dashboard', icon: 'grid_view' },
+      { path: '/incidents/stop-work', label: 'Stop Work', icon: 'front_hand' },
+      { path: '/risk/dashboard', label: 'Risk Overview', icon: 'shield' },
       { path: '/risk/critical-barrier-failures', label: 'Critical Barrier Failures', icon: 'fact_check' },
       { path: '/risk/barrier-failures', label: 'Barrier Failures', icon: 'gpp_bad' },
       { path: '/risk/work-types', label: 'Work Types', icon: 'engineering' },
       { path: '/risk/register', label: 'Register', icon: 'list_alt' },
-      { path: '/risk/sites', label: 'Sites', icon: 'location_on' },
+      { path: '/incidents/sites', label: 'Sites', icon: 'location_on' },
+      { path: '/risk/sites', label: 'Risk Sites', icon: 'domain' },
     ],
   },
   {

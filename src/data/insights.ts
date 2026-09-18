@@ -1,4 +1,4 @@
-import type { ActionFields, Insight, InsightKind } from '@/types';
+import type { Insight, InsightKind } from '@/types';
 import type { Tone } from '@/tokens';
 import { SITES_BY_ID, SITE_ID_BY_NAME } from './sites';
 import { inPurview, type PurviewFilter } from './purview';
@@ -29,15 +29,48 @@ export const INSIGHTS: Insight[] = [
     id: 'INS-2210', status: 'review', kind: 'critical_observation', theme: 'Barrier failure',
     title: 'Spotter absent when excavator began reversing at Northgate haul road',
     summary: 'A single high-confidence barrier failure — spotter not in position during a live reversing sequence. Bypasses the trend threshold and routes immediately.',
+    // Full narrative + likely cause, seeded alongside the short `summary`
+    // one-liner so review actually gets what a reviewer needs to decide
+    // whether to progress to action — not just the headline. INS-2204 was
+    // otherwise the only insight demonstrating this pair, and it's `action`
+    // status, so review never actually showed it.
+    suggested: 'An excavator began a reversing manoeuvre on the Northgate haul road with no spotter confirmed in position to cover its blind spot. This is routed straight to review rather than waiting on a trend, because a single high-confidence barrier failure — a mobile plant exclusion control not engaging when it was needed — is treated as critical on its own, regardless of how many times it has happened before.',
+    suggestedBasis: 'Based on 1 critical observation at Northgate Open Cut: a reversing excavator with no spotter positioned. No further observations are required to route this — the barrier-failure classification alone is enough.',
+    cause: 'Spotter positioning is not being verified as a discrete step before reversing starts — crews appear to treat "someone will confirm" as sufficient, without a named check or sign-off.',
+    causeBasis: 'The observation describes the reversing sequence beginning with no confirmation step at all, consistent with spotter positioning being assumed rather than actively checked.',
     siteNames: ['Northgate Open Cut'], observationCount: 1, supporterInitials: [],
-    energyTypes: ['kinetic'], updated: '6m ago', updatedAt: '2025-05-07T09:54:00', cleared_for_toolbox: false,
+    energyTypes: ['kinetic'],
+    // Rolled up from OB-5821's own safetyPracticeIds — see
+    // AiClassification's own doc comment, types/observation.ts.
+    safetyPracticeIds: ['sp25', 'sp9'],
+    updated: '6m ago', updatedAt: '2025-05-07T09:54:00', cleared_for_toolbox: false,
+    // Populated so the "Suggested next steps" section (InsightDetail.tsx)
+    // has something real to show while still in `review` — INS-2204 (the
+    // other seed with this content) is `action`, so this was otherwise
+    // never actually demonstrated at the review stage.
+    aiSuggestedInterviewQuestions: [
+      'Was a spotter assigned for this reversing task before it began?',
+      'How often does reversing happen here without a spotter confirmed in position first?',
+    ],
+    aiSuggestedCorrectiveActions: [
+      { step: 1, action: 'Make spotter confirmation a mandatory pre-reversing check at Northgate haul road.' },
+      { step: 2, action: 'Add a physical sign-off step before mobile plant reverses in this zone.' },
+    ],
+    aiSuggestedCorrectiveActionsRationale: 'A mandatory pre-check closes the gap directly; the sign-off step makes the check verifiable rather than assumed.',
+    aiToolboxNarrative: 'We need to talk about spotters and reversing plant. An excavator started reversing at the haul road with nobody confirmed in position to watch its blind spot. Nobody was hurt this time, but that is down to luck, not the control working. Before any reversing task starts, confirm out loud that a spotter is in position — do not assume it, check it.',
   },
   {
-    id: 'INS-2204', status: 'review', kind: 'cross_site_pattern', theme: 'Heat management',
+    id: 'INS-2204', status: 'action', kind: 'cross_site_pattern', theme: 'Heat management',
     title: 'Heat management plan non-compliance during elevated temperatures',
     summary: 'Heat-plan requirements not applied consistently past threshold temperatures — work continuing without mandatory rest or hydration breaks.',
     siteNames: ['Coolinga Plant', 'Ridgeback Processing', 'Northgate Open Cut'], observationCount: 4, supporterInitials: ['KO', 'TM'],
-    energyTypes: ['thermal'], updated: '18m ago', updatedAt: '2025-05-07T09:42:00', cleared_for_toolbox: false,
+    energyTypes: ['thermal'],
+    // Rolled up from the source observations' own safetyPracticeIds
+    // (OB-5814/5810/5807/5788) — see AiClassification's own doc comment,
+    // types/observation.ts.
+    safetyPracticeIds: ['sp14', 'sp13', 'sp1'],
+    updated: '18m ago', updatedAt: '2025-05-07T09:42:00', cleared_for_toolbox: true,
+    owner: 'P. Chandra',
     cause: 'Temperature monitoring and the trigger to stop work are not clearly assigned during operations — the plan exists but the stop authority is ambiguous in practice.',
     suggested: 'Heat management plan requirements are not being applied consistently during sustained elevated temperatures. Workers are continuing tasks beyond threshold temperatures without mandatory rest or hydration breaks.',
     suggestedBasis: 'Based on 4 observations across Coolinga, Ridgeback and Northgate — all describing work continuing past temperature thresholds. 3 of 4 flagged a degraded thermal barrier.',
@@ -50,13 +83,30 @@ export const INSIGHTS: Insight[] = [
       { name: 'Kwame Osei', note: 'Saw the same pattern at Blackrock last summer — this needs a system fix, not individual coaching.' },
       { name: 'Tanya Morrow', note: 'Regional heat plan review is overdue — this is the right trigger.' },
     ],
+    action: {
+      controlNeed: 'Issue an interim heat-stop directive until stop-call ownership is clarified.',
+      controlDone: 'Interim heat-stop directive issued to all three sites.',
+    },
+    aiSuggestedInterviewQuestions: [
+      'Who on shift is currently expected to call a heat stop?',
+      'Has a scheduled break ever been skipped because nobody called it?',
+    ],
+    aiSuggestedCorrectiveActions: [
+      { step: 1, action: 'Name a single accountable stop-call role per shift at each site.' },
+      { step: 2, action: 'Link the mandatory break trigger to the site thermometer reading rather than a manual call.' },
+    ],
+    aiSuggestedCorrectiveActionsRationale: 'Naming the role first closes the ownership gap directly; automating the trigger second removes reliance on anyone remembering to call it at all.',
+    aiToolboxNarrative: 'We need to talk openly about heat stops on this site. Recent checks show crews have kept working past the point where a break should have been called — not because anyone did the wrong thing, but because it was never clear whose job it was to call it. That is being fixed at the leadership level right now with a named role for every shift. In the meantime, if you think a heat stop is due, call it yourself — do not wait for someone else to notice. You will be backed for making that call.',
   },
   { id: 'INS-2201', status: 'review', kind: 'cross_site_pattern', theme: 'Pre-start checks', title: 'Pre-start checks slipping during shift handovers',
     summary: '7 observations in 14 days, concentrated 06:00–07:00 across loader and dozer crews. Coincides with the last roster change.',
     siteNames: ['Northgate Open Cut', 'Marlow Stockyard', 'Brookman Pit 2'], observationCount: 7, supporterInitials: ['AP', 'MC', 'SR'], energyTypes: ['none'], updated: '1h ago', updatedAt: '2025-05-07T09:00:00', cleared_for_toolbox: false },
   { id: 'INS-2198', status: 'review', kind: 'worksite_trend', theme: 'Spotter positioning', title: 'Spotter positioning at crusher exclusion zones',
     summary: 'Spotters standing inside marked exclusion at the Jewell crusher during truck reversing — 4 observations across 2 shifts.',
-    siteNames: ['Jewell Crusher'], observationCount: 4, supporterInitials: ['NO', 'JL'], energyTypes: ['kinetic'], owner: 'Jordan Marsh', updated: '3h ago', updatedAt: '2025-05-07T07:00:00', cleared_for_toolbox: false },
+    siteNames: ['Jewell Crusher'], observationCount: 4, supporterInitials: ['NO', 'JL'], energyTypes: ['kinetic'],
+    // Rolled up from OB-5798's own safetyPracticeIds.
+    safetyPracticeIds: ['sp25', 'sp5'],
+    owner: 'Jordan Marsh', updated: '3h ago', updatedAt: '2025-05-07T07:00:00', cleared_for_toolbox: false },
   { id: 'INS-2187', status: 'action', kind: 'worksite_trend', theme: 'Tool tethering', title: 'Tool tethering on elevated walkways',
     summary: 'Unsecured tools observed at height on overhead conveyor walkways across two shifts at Coolinga.',
     siteNames: ['Coolinga Plant'], observationCount: 6, supporterInitials: ['JL', 'TM'], energyTypes: ['gravitational'], owner: 'Jess Liang', updated: '5d ago', updatedAt: '2025-05-02T10:00:00', cleared_for_toolbox: true,
@@ -155,30 +205,17 @@ export function acknowledgeAndResolve(id: string, comment: string): Insight | nu
   return replaceInsight(id, { status: 'closed', resolutionType: 'acknowledged', resolutionComment: comment });
 }
 
-/** Patches the in-progress action fields without changing status. */
-export function updateActionFields(id: string, fields: Partial<ActionFields>): Insight | null {
+/** action -> closed. `resolutionSummary` is built by the caller from that
+ * insight's own Work Streams (InsightDetail.tsx) — kept out of this file to
+ * avoid a circular import (data/workStreams.ts already imports
+ * INSIGHTS_BY_ID from here). The free-text ActionFields need/done prompts
+ * this used to summarise from were retired in favour of Work Streams —
+ * `Insight.action`/`ActionFields` survive only for already-closed insights
+ * that used the old mechanism (see ResolvedPillar in InsightDetail.tsx). */
+export function resolveActionedInsight(id: string, resolutionSummary: string): Insight | null {
   const current = INSIGHTS_BY_ID[id];
   if (!current) return null;
-  return replaceInsight(id, { action: { ...current.action, ...fields } });
-}
-
-/** action -> closed. Requires at least one outcome field filled (matches
- * CORRECTIVE-ACTIONS.md's "neither phase gates the other" — a manager can
- * complete Learn without Improve, etc., but resolving needs *something* to
- * summarise). Generates the outcome summary shown on the resolved insight. */
-export function resolveActionedInsight(id: string): Insight | null {
-  const current = INSIGHTS_BY_ID[id];
-  if (!current) return null;
-  return replaceInsight(id, { status: 'closed', resolutionType: 'actioned', resolutionSummary: generateOutcomeSummary(current.action) });
-}
-
-function generateOutcomeSummary(action?: ActionFields): string {
-  const sentences: string[] = [];
-  if (action?.controlDone) sentences.push(`Immediate risk was contained: ${action.controlDone}`);
-  if (action?.improveDone) sentences.push(`The underlying gap was addressed: ${action.improveDone}`);
-  if (action?.learnDone) sentences.push(`This was communicated to crews: ${action.learnDone}`);
-  if (sentences.length === 0) return 'Marked resolved with no outcome recorded.';
-  return sentences.join(' ');
+  return replaceInsight(id, { status: 'closed', resolutionType: 'actioned', resolutionSummary });
 }
 
 /** True if at least one of the insight's contributing sites satisfies the

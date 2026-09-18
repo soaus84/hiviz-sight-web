@@ -1,9 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { colors } from '@/tokens';
-import { Card, Eyebrow, Badge, InfoTip } from '@/components';
+import { Badge, InfoTip } from '@/components';
 import { computeControlEffectiveness, recentControlFailures } from '@/data/risk';
 import { barrierFailurePath } from '@/data/barrierFailures';
 import { CONTROL_EFFECTIVENESS_DISPLAY, BARRIER_FAILURE_STATUS_DISPLAY } from './riskDisplay';
+import { Section } from '@/views/shared/SectionHeading';
 
 function ControlEffectivenessInfo() {
   return (
@@ -27,8 +28,11 @@ export function ControlEffectivenessCard({ criticalControlId, siteId }: { critic
   const d = likelihood ? CONTROL_EFFECTIVENESS_DISPLAY[likelihood] : null;
 
   return (
-    <Card pad={20} style={{ marginBottom: 16 }}>
-      <Eyebrow right={<InfoTip><ControlEffectivenessInfo /></InfoTip>}>Effectiveness</Eyebrow>
+    <Section
+      title="Effectiveness"
+      subtitle="How often this control has actually been flagged not-in-place, based on recent barrier failures."
+      action={<InfoTip><ControlEffectivenessInfo /></InfoTip>}
+    >
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         {d ? (
           <>
@@ -58,6 +62,6 @@ export function ControlEffectivenessCard({ criticalControlId, siteId }: { critic
           </div>
         );
       })}
-    </Card>
+    </Section>
   );
 }
